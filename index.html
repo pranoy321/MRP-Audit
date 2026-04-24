@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,182 +8,177 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyBOcuDsz0yEnU-vo8yPyuW6b71icwYRPs0",
+  authDomain: "mrp-audit.firebaseapp.com",
+  projectId: "mrp-audit",
+  storageBucket: "mrp-audit.firebasestorage.app",
+  messagingSenderId: "556134876213",
+  appId: "1:556134876213:web:64e50c9be285a549aa9d7c"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+window._db=db; window._doc=doc; window._setDoc=setDoc; window._getDoc=getDoc;
+window._onSnapshot=onSnapshot; window._collection=collection; window._getDocs=getDocs;
+window._firebaseReady=true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#f0f4f8;
-  --surface:#ffffff;
-  --surface2:#f8fafc;
-  --border:#e2e8f0;
-  --border2:#cbd5e1;
-  --accent:#1d4ed8;
-  --accent-light:#eff6ff;
-  --accent-mid:#bfdbfe;
-  --green:#16a34a;
-  --green-light:#f0fdf4;
-  --green-mid:#bbf7d0;
-  --red:#dc2626;
-  --red-light:#fef2f2;
-  --red-mid:#fecaca;
-  --amber:#d97706;
-  --amber-light:#fffbeb;
-  --amber-mid:#fde68a;
-  --text:#0f172a;
-  --text2:#334155;
-  --muted:#64748b;
-  --muted2:#94a3b8;
-  --font:'Outfit',sans-serif;
-  --mono:'JetBrains Mono',monospace;
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--border2:#cbd5e1;
+  --accent:#1d4ed8;--accent-light:#eff6ff;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --red:#dc2626;--red-light:#fef2f2;--red-mid:#fecaca;
+  --amber:#d97706;--amber-light:#fffbeb;--amber-mid:#fde68a;
+  --text:#0f172a;--text2:#334155;--muted:#64748b;--muted2:#94a3b8;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
   --shadow-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.05);
   --shadow-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -2px rgba(0,0,0,.04);
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:14px;}
-
-/* Top bar */
+#loadingScreen{position:fixed;inset:0;background:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px;transition:opacity .5s;}
+#loadingScreen.hide{opacity:0;pointer-events:none;}
+.load-logo{width:64px;height:64px;background:rgba(255,255,255,.18);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.3);}
+.load-title{color:#fff;font-size:20px;font-weight:700;}
+.load-sub{color:rgba(255,255,255,.65);font-size:13px;}
+.spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .topbar{background:var(--accent);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(29,78,216,.3);}
 .topbar-left{display:flex;align-items:center;gap:14px;}
-.topbar-logo{width:36px;height:36px;background:rgba(255,255,255,.18);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.25);letter-spacing:-.02em;}
+.topbar-logo{width:36px;height:36px;background:rgba(255,255,255,.18);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.25);}
 .topbar-brand{color:rgba(255,255,255,.65);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
-.topbar-title{color:#fff;font-size:16px;font-weight:700;letter-spacing:-.01em;margin-top:1px;}
-.topbar-right{display:flex;align-items:center;gap:8px;}
+.topbar-title{color:#fff;font-size:16px;font-weight:700;margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .topbar-date{color:rgba(255,255,255,.8);font-family:var(--mono);font-size:12px;padding:5px 11px;background:rgba(255,255,255,.12);border-radius:6px;border:1px solid rgba(255,255,255,.18);}
-
-/* Main */
+.sync-badge{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.18);transition:all .3s;}
+.sync-badge.synced{background:rgba(34,197,94,.25);color:#86efac;}
+.sync-badge.syncing{background:rgba(251,191,36,.2);color:#fcd34d;}
+.sync-badge.offline{background:rgba(239,68,68,.2);color:#fca5a5;}
+.sdot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.sdot.anim{animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 .main{max-width:980px;margin:0 auto;padding:24px 16px 48px;}
-
-/* Stats */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
 .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:13px 13px 0 0;}
-.stat-card.c-blue::after{background:var(--accent);}
-.stat-card.c-green::after{background:var(--green);}
-.stat-card.c-red::after{background:var(--red);}
-.stat-card.c-amber::after{background:var(--amber);}
-.stat-icon{position:absolute;right:14px;top:16px;font-size:22px;opacity:.12;}
-.stat-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
-.stat-num{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1;}
-.stat-num.c-blue{color:var(--accent);}
-.stat-num.c-green{color:var(--green);}
-.stat-num.c-red{color:var(--red);}
-.stat-num.c-amber{color:var(--amber);}
-.stat-sub{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4;}
-
-/* Action bar */
+.stat-card.cb::after{background:var(--accent);}
+.stat-card.cg::after{background:var(--green);}
+.stat-card.cr::after{background:var(--red);}
+.stat-card.ca::after{background:var(--amber);}
+.sicon{position:absolute;right:14px;top:16px;font-size:22px;opacity:.12;}
+.slabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.snum{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1;}
+.snum.cb{color:var(--accent);} .snum.cg{color:var(--green);} .snum.cr{color:var(--red);} .snum.ca{color:var(--amber);}
+.ssub2{font-size:11px;color:var(--muted);margin-top:6px;}
 .action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap;}
 .slot-group{display:flex;align-items:center;gap:10px;}
-.slot-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+.slot-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
 .slot-chips{display:flex;gap:7px;}
 .chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;font-family:var(--mono);border:1.5px solid var(--border2);color:var(--muted);background:var(--surface);transition:all .2s;}
 .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(29,78,216,.28);}
-.pulse-dot{display:inline-block;width:6px;height:6px;background:#fff;border-radius:50%;margin-left:5px;vertical-align:middle;animation:pulse 1.5s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.pdot{display:inline-block;width:6px;height:6px;background:#fff;border-radius:50%;margin-left:5px;vertical-align:middle;animation:pulse 1.5s infinite;}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap;}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
 .btn-ghost{background:var(--surface);color:var(--text2);border:1.5px solid var(--border2);box-shadow:var(--shadow);}
 .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
 .btn-save{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.22);}
 .btn-save:hover{background:#15803d;}
-
-/* Material section */
 .mat-section{margin-bottom:22px;}
 .mat-header-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-.mat-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:.01em;}
+.mat-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;}
 .mat-pill.epdm{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;}
 .mat-pill.silicone{background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;}
 .mat-line{flex:1;height:1px;background:var(--border);}
-
-/* Table card */
 .table-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden;}
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 table{width:100%;border-collapse:collapse;min-width:520px;}
 thead tr{background:var(--surface2);border-bottom:2px solid var(--border);}
 th{padding:11px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);white-space:nowrap;}
 th.th-stage{text-align:left;padding-left:20px;min-width:210px;}
-th.th-norm{min-width:72px;}
-th.th-slot{min-width:96px;}
-th.th-slot.active-th{color:var(--accent);background:rgba(29,78,216,.04);}
+th.th-norm{min-width:72px;} th.th-slot{min-width:96px;}
+th.th-slot.ath{color:var(--accent);background:rgba(29,78,216,.04);}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:#f8fafc;}
-tbody tr.breach-row{background:rgba(220,38,38,.025);}
+tbody tr.brow{background:rgba(220,38,38,.025);}
 td{padding:10px 14px;vertical-align:middle;}
 td.td-stage{padding-left:20px;}
 .sname{font-size:13px;font-weight:500;color:var(--text2);}
 .ssub{font-size:11px;color:var(--muted2);margin-top:2px;}
 td.td-norm{text-align:center;}
-.norm-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:12px;font-weight:600;background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-mid);}
-td.td-input{text-align:center;padding:7px 8px;}
-td.td-input.active-col{background:rgba(29,78,216,.03);}
+.npill{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:12px;font-weight:600;background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-mid);}
+td.td-inp{text-align:center;padding:7px 8px;}
+td.td-inp.acol{background:rgba(29,78,216,.03);}
 .inp-wrap{display:flex;justify-content:center;}
-.slot-inp{width:74px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;font-weight:500;text-align:center;outline:none;transition:all .15s;-moz-appearance:textfield;}
-.slot-inp::-webkit-inner-spin-button,.slot-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
-.slot-inp:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
-.slot-inp.s-active{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.08);}
-.slot-inp.s-ok{border-color:var(--green);background:var(--green-light);color:var(--green);}
-.slot-inp.s-breach{border-color:var(--red);background:var(--red-light);color:var(--red);font-weight:700;}
-
-/* Toast */
-.toast{position:fixed;bottom:26px;right:26px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:999;display:flex;align-items:center;gap:8px;}
+.sinp{width:74px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;font-weight:500;text-align:center;outline:none;transition:all .15s;-moz-appearance:textfield;}
+.sinp::-webkit-inner-spin-button,.sinp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.sinp:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
+.sinp.sa{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.08);}
+.sinp.sok{border-color:var(--green);background:var(--green-light);color:var(--green);}
+.sinp.sbr{border-color:var(--red);background:var(--red-light);color:var(--red);font-weight:700;}
+.toast{position:fixed;bottom:26px;right:26px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:9998;display:flex;align-items:center;gap:8px;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{background:var(--green);color:#fff;}
 .toast.error{background:var(--red);color:#fff;}
-
-/* Overlay */
+.toast.info{background:var(--accent);color:#fff;}
 .overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);}
 .overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .2s ease;}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.modal-title{font-size:17px;font-weight:700;}
-.modal-desc{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
-.close-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
-.close-btn:hover{background:var(--red-light);border-color:var(--red-mid);color:var(--red);}
-.norm-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
-.norm-row:last-of-type{border-bottom:none;}
-.norm-row-lbl{font-size:13px;font-weight:500;color:var(--text2);}
-.norm-inp-grp{display:flex;align-items:center;gap:7px;}
-.norm-lt{font-family:var(--mono);font-weight:700;color:var(--amber);font-size:16px;}
-.norm-inp{width:66px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;text-align:center;outline:none;transition:border-color .15s;}
-.norm-inp:focus{border-color:var(--accent);background:#fff;}
-.modal-save{width:100%;margin-top:22px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s;}
-.modal-save:hover{background:#1e40af;}
-
-/* History modal */
-.hist-modal{max-width:740px;}
-.date-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;}
-.date-scroll::-webkit-scrollbar{height:3px;}
-.date-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-.date-btn{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:var(--mono);transition:all .15s;}
-.date-btn:hover{border-color:var(--accent);color:var(--accent);}
-.date-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.hist-mat{margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.hist-mat-hd{padding:10px 14px;background:var(--surface2);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);}
-.hist-tbl{width:100%;border-collapse:collapse;}
-.hist-tbl th{padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:center;border-bottom:1px solid var(--border);}
-.hist-tbl th:first-child{text-align:left;}
-.hist-tbl td{padding:8px 12px;border-top:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);}
-.hist-tbl td:first-child{text-align:left;font-family:var(--font);font-size:12px;color:var(--text2);}
-.hist-ok{color:var(--green);font-weight:600;}
-.hist-breach{color:var(--red);font-weight:700;}
-.hist-empty{color:var(--muted2);}
-.no-hist{text-align:center;padding:40px 20px;color:var(--muted);}
-.no-hist p{font-size:14px;margin-top:8px;}
-
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.mtitle{font-size:17px;font-weight:700;}
+.mdesc{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.cbtn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.cbtn:hover{background:var(--red-light);border-color:var(--red-mid);color:var(--red);}
+.nrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.nrow:last-of-type{border-bottom:none;}
+.nrlbl{font-size:13px;font-weight:500;color:var(--text2);}
+.nrgrp{display:flex;align-items:center;gap:7px;}
+.nlt{font-family:var(--mono);font-weight:700;color:var(--amber);font-size:16px;}
+.ninp{width:66px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;text-align:center;outline:none;}
+.ninp:focus{border-color:var(--accent);background:#fff;}
+.msave{width:100%;margin-top:22px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
+.msave:hover{background:#1e40af;}
+.hmodal{max-width:740px;}
+.dscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;}
+.dscroll::-webkit-scrollbar{height:3px;}
+.dscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.dbtn{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:var(--mono);transition:all .15s;}
+.dbtn:hover{border-color:var(--accent);color:var(--accent);}
+.dbtn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.hmat{margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.hmathd{padding:10px 14px;background:var(--surface2);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);}
+.htbl{width:100%;border-collapse:collapse;}
+.htbl th{padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;text-align:center;border-bottom:1px solid var(--border);}
+.htbl th:first-child{text-align:left;}
+.htbl td{padding:8px 12px;border-top:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);}
+.htbl td:first-child{text-align:left;font-family:var(--font);font-size:12px;}
+.hok{color:var(--green);font-weight:600;} .hbr{color:var(--red);font-weight:700;} .hemp{color:var(--muted2);}
+.nohist{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
 @media(max-width:680px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .topbar-brand{display:none;}
   .action-bar{flex-direction:column;align-items:flex-start;}
   .btn-group{width:100%;}
   .btn{flex:1;justify-content:center;}
-  .stat-num{font-size:22px;}
+  .snum{font-size:22px;}
 }
-@media(max-width:400px){
-  .stats-row{grid-template-columns:1fr;}
-}
+@media(max-width:400px){.stats-row{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
+
+<div id="loadingScreen">
+  <div class="load-logo">MR</div>
+  <div class="load-title">MRP AutoRub Daily Audit</div>
+  <div class="spinner"></div>
+  <div class="load-sub">Connecting to database…</div>
+</div>
 
 <div class="topbar">
   <div class="topbar-left">
@@ -194,41 +190,30 @@ td.td-input.active-col{background:rgba(29,78,216,.03);}
   </div>
   <div class="topbar-right">
     <div class="topbar-date" id="topbarDate">—</div>
+    <div class="sync-badge syncing" id="syncBadge">
+      <span class="sdot anim"></span>
+      <span id="syncText">Connecting…</span>
+    </div>
   </div>
 </div>
 
 <div class="main">
-
   <div class="stats-row">
-    <div class="stat-card c-blue">
-      <div class="stat-icon">📋</div>
-      <div class="stat-label">Entries Today</div>
-      <div class="stat-num c-blue"><span id="sFilled">0</span><span style="font-size:15px;color:var(--muted);font-weight:500" id="sTotal"> / 30</span></div>
-      <div class="stat-sub" id="sPct">0% fields filled</div>
-    </div>
-    <div class="stat-card c-green" id="breachCard">
-      <div class="stat-icon">✅</div>
-      <div class="stat-label">Norm Breaches</div>
-      <div class="stat-num c-green" id="sBreaches">0</div>
-      <div class="stat-sub" id="sBreachSub">All within limits ✓</div>
-    </div>
-    <div class="stat-card c-amber">
-      <div class="stat-icon">🕐</div>
-      <div class="stat-label">Active Slot</div>
-      <div class="stat-num c-amber" style="font-size:17px;padding-top:4px" id="sSlot">—</div>
-      <div class="stat-sub">Current time window</div>
-    </div>
-    <div class="stat-card c-blue">
-      <div class="stat-icon">📅</div>
-      <div class="stat-label">Days Recorded</div>
-      <div class="stat-num c-blue" id="sDays">0</div>
-      <div class="stat-sub">Total audit history</div>
-    </div>
+    <div class="stat-card cb"><div class="sicon">📋</div><div class="slabel">Entries Today</div>
+      <div class="snum cb"><span id="sFilled">0</span><span style="font-size:15px;color:var(--muted);font-weight:500" id="sTotal"> / 30</span></div>
+      <div class="ssub2" id="sPct">0% complete</div></div>
+    <div class="stat-card cg" id="breachCard"><div class="sicon">✅</div><div class="slabel">Norm Breaches</div>
+      <div class="snum cg" id="sBreaches">0</div><div class="ssub2" id="sBreachSub">All within limits ✓</div></div>
+    <div class="stat-card ca"><div class="sicon">🕐</div><div class="slabel">Active Slot</div>
+      <div class="snum ca" style="font-size:17px;padding-top:4px" id="sSlot">—</div>
+      <div class="ssub2">Current time window</div></div>
+    <div class="stat-card cb"><div class="sicon">📅</div><div class="slabel">Days Recorded</div>
+      <div class="snum cb" id="sDays">0</div><div class="ssub2">Total audit history</div></div>
   </div>
 
   <div class="action-bar">
     <div class="slot-group">
-      <span class="slot-label">Slots:</span>
+      <span class="slot-lbl">Slots:</span>
       <div class="slot-chips">
         <span class="chip" id="chip0">9:30 AM</span>
         <span class="chip" id="chip1">1:00 PM</span>
@@ -237,91 +222,60 @@ td.td-input.active-col{background:rgba(29,78,216,.03);}
     </div>
     <div class="btn-group">
       <button class="btn btn-ghost" onclick="openHistory()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        History
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>History
       </button>
       <button class="btn btn-ghost" onclick="openNorms()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-        Edit Norms
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>Edit Norms
       </button>
       <button class="btn btn-ghost" onclick="exportExcel()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export Excel
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel
       </button>
-      <button class="btn btn-save" onclick="saveAll()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Save Audit
+      <button class="btn btn-save" onclick="saveToCloud()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Sync Now
       </button>
     </div>
   </div>
 
   <div class="mat-section">
-    <div class="mat-header-row">
-      <div class="mat-pill epdm">🔵 EPDM</div>
-      <div class="mat-line"></div>
-    </div>
-    <div class="table-card">
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th class="th-stage">Stage</th>
-            <th class="th-norm">Norm</th>
-            <th class="th-slot" id="th-EPDM-0">9:30 AM</th>
-            <th class="th-slot" id="th-EPDM-1">1:00 PM</th>
-            <th class="th-slot" id="th-EPDM-2">4:00 PM</th>
-          </tr></thead>
-          <tbody id="body-EPDM"></tbody>
-        </table>
-      </div>
-    </div>
+    <div class="mat-header-row"><div class="mat-pill epdm">🔵 EPDM</div><div class="mat-line"></div></div>
+    <div class="table-card"><div class="tbl-wrap">
+      <table><thead><tr>
+        <th class="th-stage">Stage</th><th class="th-norm">Norm</th>
+        <th class="th-slot" id="th-EPDM-0">9:30 AM</th>
+        <th class="th-slot" id="th-EPDM-1">1:00 PM</th>
+        <th class="th-slot" id="th-EPDM-2">4:00 PM</th>
+      </tr></thead><tbody id="body-EPDM"></tbody></table>
+    </div></div>
   </div>
 
   <div class="mat-section">
-    <div class="mat-header-row">
-      <div class="mat-pill silicone">🟢 Silicone</div>
-      <div class="mat-line"></div>
-    </div>
-    <div class="table-card">
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th class="th-stage">Stage</th>
-            <th class="th-norm">Norm</th>
-            <th class="th-slot" id="th-Silicone-0">9:30 AM</th>
-            <th class="th-slot" id="th-Silicone-1">1:00 PM</th>
-            <th class="th-slot" id="th-Silicone-2">4:00 PM</th>
-          </tr></thead>
-          <tbody id="body-Silicone"></tbody>
-        </table>
-      </div>
-    </div>
+    <div class="mat-header-row"><div class="mat-pill silicone">🟢 Silicone</div><div class="mat-line"></div></div>
+    <div class="table-card"><div class="tbl-wrap">
+      <table><thead><tr>
+        <th class="th-stage">Stage</th><th class="th-norm">Norm</th>
+        <th class="th-slot" id="th-Silicone-0">9:30 AM</th>
+        <th class="th-slot" id="th-Silicone-1">1:00 PM</th>
+        <th class="th-slot" id="th-Silicone-2">4:00 PM</th>
+      </tr></thead><tbody id="body-Silicone"></tbody></table>
+    </div></div>
   </div>
-
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- Norms Modal -->
 <div class="overlay" id="normsOv" onclick="closeNorms(event)">
   <div class="modal">
-    <div class="modal-hdr">
-      <span class="modal-title">⚙️ Edit Stage Norms</span>
-      <button class="close-btn" onclick="closeNorms()">✕</button>
-    </div>
-    <p class="modal-desc">Set the maximum trolley count threshold for each stage. Entries above this value will be flagged immediately. Leave blank if no norm applies.</p>
+    <div class="mhdr"><span class="mtitle">⚙️ Edit Stage Norms</span><button class="cbtn" onclick="closeNorms()">✕</button></div>
+    <p class="mdesc">Set the maximum trolley count per stage. Entries above this will be flagged red instantly across all devices.</p>
     <div id="normsForm"></div>
-    <button class="modal-save" onclick="saveNorms()">Save Norms</button>
+    <button class="msave" onclick="saveNorms()">Save & Sync Norms</button>
   </div>
 </div>
 
-<!-- History Modal -->
 <div class="overlay" id="histOv" onclick="closeHistory(event)">
-  <div class="modal hist-modal">
-    <div class="modal-hdr">
-      <span class="modal-title">📅 Audit History</span>
-      <button class="close-btn" onclick="closeHistory()">✕</button>
-    </div>
-    <p class="modal-desc">View past audit records by date. Red values exceeded the norm threshold on that day.</p>
+  <div class="modal hmodal">
+    <div class="mhdr"><span class="mtitle">📅 Audit History</span><button class="cbtn" onclick="closeHistory()">✕</button></div>
+    <p class="mdesc">All past audit records synced from the cloud. Red values exceeded the norm threshold.</p>
     <div id="histContent"></div>
   </div>
 </div>
@@ -330,40 +284,91 @@ td.td-input.active-col{background:rgba(29,78,216,.03);}
 const MATS=['EPDM','Silicone'];
 const SLOTS=['9:30 AM','1:00 PM','4:00 PM'];
 const STAGES=[
-  {key:'printing',   label:'Waiting for Printing',       sub:'Print queue bottleneck'},
-  {key:'inspMixup',  label:'Inspection – Mixup Parts',   sub:'Mixed part hold count'},
-  {key:'inspSingle', label:'Inspection – Single Parts',  sub:'Single part hold count'},
-  {key:'assembly',   label:'Waiting for Assembly',       sub:'Pre-assembly queue'},
-  {key:'packing',    label:'Waiting for Packing',        sub:'Pre-packing queue'},
+  {key:'printing',   label:'Waiting for Printing',      sub:'Print queue bottleneck'},
+  {key:'inspMixup',  label:'Inspection – Mixup Parts',  sub:'Mixed part hold count'},
+  {key:'inspSingle', label:'Inspection – Single Parts', sub:'Single part hold count'},
+  {key:'assembly',   label:'Waiting for Assembly',      sub:'Pre-assembly queue'},
+  {key:'packing',    label:'Waiting for Packing',       sub:'Pre-packing queue'},
 ];
-const SK='mrp_audit_v2', NK='mrp_norms_v2';
+const NK='mrp_norms_v2';
 const DN={printing:'',inspMixup:2,inspSingle:5,assembly:2,packing:4};
 
 let allData={}, norms={...DN}, today=todayKey(), curSlot=slotIdx();
+let saveTimer=null, unsubscribe=null;
 
 function todayKey(){return new Date().toISOString().slice(0,10);}
 function fmtDate(s){return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
 function fmtLong(s){return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}
 function slotIdx(){const m=new Date().getHours()*60+new Date().getMinutes();return m<780?0:m<960?1:2;}
-function ls(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}
-function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
 
-function init(){
-  allData=ls(SK)||{};
-  norms=ls(NK)||{...DN};
-  renderAll();
-  setInterval(()=>{curSlot=slotIdx();today=todayKey();renderAll();},60000);
+function setSyncStatus(state,text){
+  const b=document.getElementById('syncBadge'),t=document.getElementById('syncText'),d=b.querySelector('.sdot');
+  b.className='sync-badge '+state; t.textContent=text;
+  d.className='sdot'+(state==='syncing'?' anim':'');
+}
+
+function waitForFirebase(cb){
+  if(window._firebaseReady) cb();
+  else window.addEventListener('firebase-ready',cb,{once:true});
+}
+
+function startRealtimeSync(){
+  subscribeToday();
+  loadNormsFromCloud();
+}
+
+function subscribeToday(){
+  if(unsubscribe) unsubscribe();
+  const ref=window._doc(window._db,'audits',today);
+  unsubscribe=window._onSnapshot(ref,snap=>{
+    if(snap.exists()) allData[today]=snap.data();
+    renderAll();
+    setSyncStatus('synced','Live ✓');
+  },()=>{setSyncStatus('offline','Offline');});
+}
+
+async function loadNormsFromCloud(){
+  try{
+    const snap=await window._getDoc(window._doc(window._db,'config','norms'));
+    if(snap.exists()) norms=snap.data();
+    else norms=lsGet(NK)||{...DN};
+    renderAll();
+  }catch{norms=lsGet(NK)||{...DN};}
+}
+
+async function loadAllHistory(){
+  try{
+    const snap=await window._getDocs(window._collection(window._db,'audits'));
+    snap.forEach(d=>{allData[d.id]=d.data();});
+    updateStatDays();
+  }catch(e){console.warn('history load failed',e);}
+}
+
+async function saveToCloud(){
+  setSyncStatus('syncing','Saving…');
+  try{
+    await window._setDoc(window._doc(window._db,'audits',today),allData[today]||{});
+    setSyncStatus('synced','Saved ✓');
+    toast('✓ Synced — all 15 devices updated instantly','success');
+  }catch{setSyncStatus('offline','Save failed');toast('Save failed — check connection','error');}
+}
+
+function scheduleAutoSave(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{if(window._firebaseReady)saveToCloud();},3000);
 }
 
 function renderAll(){
   document.getElementById('topbarDate').textContent=fmtDate(today);
   SLOTS.forEach((s,i)=>{
     const c=document.getElementById('chip'+i);
-    c.innerHTML=s+(i===curSlot?'<span class="pulse-dot"></span>':'');
+    c.innerHTML=s+(i===curSlot?'<span class="pdot"></span>':'');
     c.className='chip'+(i===curSlot?' active':'');
     MATS.forEach(m=>{
       const th=document.getElementById('th-'+m+'-'+i);
-      if(th){th.className='th-slot'+(i===curSlot?' active-th':'');th.textContent=s+(i===curSlot?' ●':'');}
+      if(th){th.className='th-slot'+(i===curSlot?' ath':'');th.textContent=s+(i===curSlot?' ●':'');}
     });
   });
   MATS.forEach(m=>buildTable(m));
@@ -377,52 +382,45 @@ function buildTable(mat){
   STAGES.forEach(st=>{
     const norm=norms[st.key];
     const tr=document.createElement('tr');
-    // Stage
     const tds=document.createElement('td');tds.className='td-stage';
-    tds.innerHTML=`<div class="sname">${st.label}</div><div class="ssub">${st.sub}</div>`;
+    tds.innerHTML='<div class="sname">'+st.label+'</div><div class="ssub">'+st.sub+'</div>';
     tr.appendChild(tds);
-    // Norm
     const tdn=document.createElement('td');tdn.className='td-norm';
     tdn.innerHTML=(norm!==''&&norm!==null&&norm!==undefined)
-      ?`<span class="norm-pill">&lt;${norm}</span>`
-      :`<span style="color:var(--muted2);font-size:12px">–</span>`;
+      ?'<span class="npill">&lt;'+norm+'</span>'
+      :'<span style="color:var(--muted2);font-size:12px">–</span>';
     tr.appendChild(tdn);
-    // Inputs
     let hasBreach=false;
     SLOTS.forEach((slot,i)=>{
       const val=md[st.key]?.[slot]??'';
       const isNum=val!==''&&val!==null&&val!==undefined;
       const breach=isNum&&norm!==''&&norm!==null&&Number(val)>Number(norm);
       if(breach)hasBreach=true;
-      const tdi=document.createElement('td');
-      tdi.className='td-input'+(i===curSlot?' active-col':'');
+      const tdi=document.createElement('td');tdi.className='td-inp'+(i===curSlot?' acol':'');
       const inp=document.createElement('input');
-      inp.type='number';inp.min='0';inp.placeholder='—';
-      inp.value=val;
-      inp.className='slot-inp'+(i===curSlot?' s-active':'')+(breach?' s-breach':isNum?' s-ok':'');
+      inp.type='number';inp.min='0';inp.placeholder='—';inp.value=val;
+      inp.className='sinp'+(i===curSlot?' sa':'')+(breach?' sbr':isNum?' sok':'');
       inp.dataset.mat=mat;inp.dataset.stage=st.key;inp.dataset.slot=slot;inp.dataset.idx=i;
       inp.addEventListener('input',onInput);
       const w=document.createElement('div');w.className='inp-wrap';w.appendChild(inp);
       tdi.appendChild(w);tr.appendChild(tdi);
     });
-    if(hasBreach)tr.classList.add('breach-row');
+    if(hasBreach)tr.classList.add('brow');
     tbody.appendChild(tr);
   });
 }
 
 function onInput(e){
-  const {mat,stage,slot,idx}=e.target.dataset;
-  const val=e.target.value;
+  const {mat,stage,slot,idx}=e.target.dataset, val=e.target.value;
   if(!allData[today])allData[today]={};
   if(!allData[today][mat])allData[today][mat]={};
   if(!allData[today][mat][stage])allData[today][mat][stage]={};
   allData[today][mat][stage][slot]=val;
-  ss(SK,allData);
-  const norm=norms[stage];
-  const isNum=val!==''&&val!==undefined;
-  const breach=isNum&&norm!==''&&norm!==null&&Number(val)>Number(norm);
-  e.target.className='slot-inp'+(Number(idx)===curSlot?' s-active':'')+(breach?' s-breach':isNum?' s-ok':'');
+  const norm=norms[stage],isNum=val!=='',breach=isNum&&norm!==''&&norm!==null&&Number(val)>Number(norm);
+  e.target.className='sinp'+(Number(idx)===curSlot?' sa':'')+(breach?' sbr':isNum?' sok':'');
+  setSyncStatus('syncing','Unsaved…');
   updateStats();
+  scheduleAutoSave();
 }
 
 function updateStats(){
@@ -431,154 +429,142 @@ function updateStats(){
   MATS.forEach(m=>{STAGES.forEach(s=>{SLOTS.forEach(sl=>{
     total++;
     const v=dd[m]?.[s.key]?.[sl];
-    if(v!==''&&v!==undefined&&v!==null){
-      filled++;
-      const n=norms[s.key];
-      if(n!==''&&n!==null&&Number(v)>Number(n))breaches++;
-    }
+    if(v!==''&&v!==undefined&&v!==null){filled++;const n=norms[s.key];if(n!==''&&n!==null&&Number(v)>Number(n))breaches++;}
   });});});
   const pct=Math.round(filled/total*100);
   document.getElementById('sFilled').textContent=filled;
   document.getElementById('sTotal').textContent=' / '+total;
-  document.getElementById('sPct').textContent=pct+'% fields filled';
-  const bEl=document.getElementById('sBreaches');
-  const bCard=document.getElementById('breachCard');
+  document.getElementById('sPct').textContent=pct+'% complete';
+  const bEl=document.getElementById('sBreaches'),bCard=document.getElementById('breachCard');
   bEl.textContent=breaches;
-  if(breaches===0){
-    bEl.className='stat-num c-green';bCard.className='stat-card c-green';
-    document.getElementById('sBreachSub').textContent='All within limits ✓';
-  } else {
-    bEl.className='stat-num c-red';bCard.className='stat-card c-red';
-    document.getElementById('sBreachSub').textContent=breaches+' stage'+(breaches>1?'s':'')+' over norm';
-  }
+  if(breaches===0){bEl.className='snum cg';bCard.className='stat-card cg';document.getElementById('sBreachSub').textContent='All within limits ✓';}
+  else{bEl.className='snum cr';bCard.className='stat-card cr';document.getElementById('sBreachSub').textContent=breaches+' stage'+(breaches>1?'s':'')+' over norm';}
   document.getElementById('sSlot').textContent=SLOTS[curSlot];
-  document.getElementById('sDays').textContent=Object.keys(allData).length;
+  updateStatDays();
 }
+function updateStatDays(){document.getElementById('sDays').textContent=Object.keys(allData).length;}
 
-function saveAll(){ss(SK,allData);toast('✓ Audit saved successfully','success');}
-
-// Norms
 function openNorms(){
   const f=document.getElementById('normsForm');f.innerHTML='';
   STAGES.forEach(s=>{
-    const r=document.createElement('div');r.className='norm-row';
-    r.innerHTML=`<span class="norm-row-lbl">${s.label}</span>
-    <div class="norm-inp-grp"><span class="norm-lt">&lt;</span>
-    <input class="norm-inp" type="number" min="0" id="ni_${s.key}" value="${norms[s.key]??''}" placeholder="–"/></div>`;
+    const r=document.createElement('div');r.className='nrow';
+    r.innerHTML='<span class="nrlbl">'+s.label+'</span><div class="nrgrp"><span class="nlt">&lt;</span><input class="ninp" type="number" min="0" id="ni_'+s.key+'" value="'+(norms[s.key]??'')+'" placeholder="–"/></div>';
     f.appendChild(r);
   });
   document.getElementById('normsOv').classList.add('open');
 }
-function saveNorms(){
+async function saveNorms(){
   STAGES.forEach(s=>{const v=document.getElementById('ni_'+s.key).value;norms[s.key]=v===''?'':Number(v);});
-  ss(NK,norms);
+  lsSet(NK,norms);
+  try{await window._setDoc(window._doc(window._db,'config','norms'),norms);}catch{}
   document.getElementById('normsOv').classList.remove('open');
-  renderAll();toast('✓ Norms updated','success');
+  renderAll();toast('✓ Norms saved and synced to all devices','success');
 }
 function closeNorms(e){if(!e||e.target===document.getElementById('normsOv'))document.getElementById('normsOv').classList.remove('open');}
 
-// History
 let histSel='';
-function openHistory(){
+async function openHistory(){
+  toast('Loading history from cloud…','info');
+  await loadAllHistory();
   const dates=Object.keys(allData).sort().reverse();
   histSel=dates[0]||'';
   const c=document.getElementById('histContent');
-  if(!dates.length){c.innerHTML='<div class="no-hist"><div style="font-size:32px">📭</div><p>No records yet.<br><span style="font-size:12px;color:var(--muted2)">Fill and save your first audit to see history.</span></p></div>';
-  } else {
-    let html=`<div class="date-scroll">`;
-    dates.forEach(d=>{html+=`<button class="date-btn${d===histSel?' active':''}" onclick="selHistDate('${d}')">${fmtDate(d)}</button>`;});
-    html+=`</div><div id="histDay"></div>`;
-    c.innerHTML=html;
-    renderHistDay();
+  if(!dates.length){c.innerHTML='<div class="nohist">📭 No records yet.<br><span style="font-size:12px;color:var(--muted2)">Fill and sync your first audit to see history.</span></div>';}
+  else{
+    let html='<div class="dscroll">';
+    dates.forEach(d=>{html+='<button class="dbtn'+(d===histSel?' active':'')+'" onclick="selHistDate(\''+d+'\')">'+fmtDate(d)+'</button>';});
+    html+='</div><div id="histDay"></div>';
+    c.innerHTML=html;renderHistDay();
   }
   document.getElementById('histOv').classList.add('open');
 }
 function selHistDate(d){
   histSel=d;
-  document.querySelectorAll('.date-btn').forEach(b=>b.classList.toggle('active',b.textContent===fmtDate(d)));
+  document.querySelectorAll('.dbtn').forEach(b=>b.classList.toggle('active',b.textContent===fmtDate(d)));
   renderHistDay();
 }
 function renderHistDay(){
   const dd=allData[histSel]||{};
-  let html=`<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px;padding:2px 0">${fmtLong(histSel)}</div>`;
+  let html='<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px">'+fmtLong(histSel)+'</div>';
   MATS.forEach(mat=>{
-    html+=`<div class="hist-mat"><div class="hist-mat-hd">${mat}</div>
-    <table class="hist-tbl"><thead><tr><th>Stage</th><th>Norm</th>`;
-    SLOTS.forEach(s=>{html+=`<th>${s}</th>`;});
-    html+=`</tr></thead><tbody>`;
+    html+='<div class="hmat"><div class="hmathd">'+mat+'</div><table class="htbl"><thead><tr><th>Stage</th><th>Norm</th>';
+    SLOTS.forEach(s=>{html+='<th>'+s+'</th>';});
+    html+='</tr></thead><tbody>';
     STAGES.forEach(st=>{
       const n=norms[st.key];
-      html+=`<tr><td>${st.label}</td><td>${n!==''&&n!==null?`<${n}`:'–'}</td>`;
+      html+='<tr><td>'+st.label+'</td><td>'+(n!==''&&n!==null?'<'+n:'–')+'</td>';
       SLOTS.forEach(sl=>{
         const v=dd[mat]?.[st.key]?.[sl];
         const ok=v!==''&&v!==undefined&&v!==null;
         const br=ok&&n!==''&&Number(v)>Number(n);
-        html+=`<td class="${br?'hist-breach':ok?'hist-ok':'hist-empty'}">${ok?v+(br?' ⚠':''):'–'}</td>`;
+        html+='<td class="'+(br?'hbr':ok?'hok':'hemp')+'">'+(ok?v+(br?' ⚠':''):'–')+'</td>';
       });
-      html+=`</tr>`;
+      html+='</tr>';
     });
-    html+=`</tbody></table></div>`;
+    html+='</tbody></table></div>';
   });
   document.getElementById('histDay').innerHTML=html;
 }
 function closeHistory(e){if(!e||e.target===document.getElementById('histOv'))document.getElementById('histOv').classList.remove('open');}
 
-// Export
-function exportExcel(){
-  if(typeof XLSX==='undefined'){toast('❌ XLSX library not loaded','error');return;}
+async function exportExcel(){
+  toast('Loading all data…','info');
+  await loadAllHistory();
+  if(typeof XLSX==='undefined'){toast('XLSX not loaded','error');return;}
   const wb=XLSX.utils.book_new();
-  const rows=[
-    ['MRP AutoRub Pvt Ltd – Daily Production Audit Report'],
-    ['Report generated:',new Date().toLocaleString('en-IN')],
-    [],
-    ['Date','Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM','Breaches','Status']
-  ];
+  const rows=[['MRP AutoRub Pvt Ltd – Daily Production Audit Report'],['Generated:',new Date().toLocaleString('en-IN')],[],['Date','Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM','Breaches','Status']];
   Object.keys(allData).sort().forEach(date=>{
     const dd=allData[date]||{};
-    MATS.forEach(mat=>{
-      STAGES.forEach(st=>{
-        const n=norms[st.key];
-        const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return v!==''&&v!==undefined&&v!==null?Number(v):'';});
-        const br=vals.filter(v=>v!==''&&n!==''&&n!==null&&Number(v)>Number(n)).length;
-        rows.push([fmtDate(date),mat,st.label,n!==''&&n!==null?`<${n}`:'–',...vals,br||'',n===''||n===null?'–':br===0?'OK':'BREACH']);
-      });
-    });
+    MATS.forEach(mat=>{STAGES.forEach(st=>{
+      const n=norms[st.key];
+      const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return v!==''&&v!==undefined&&v!==null?Number(v):'';});
+      const br=vals.filter(v=>v!==''&&n!==''&&n!==null&&Number(v)>Number(n)).length;
+      rows.push([fmtDate(date),mat,st.label,n!==''&&n!==null?'<'+n:'–',...vals,br||'',n===''||n===null?'–':br===0?'OK':'BREACH']);
+    });});
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   ws['!cols']=[16,10,28,8,10,10,10,10,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws,'Audit Summary');
-  // Daily sheets
   Object.keys(allData).sort().forEach(date=>{
     const dd=allData[date]||{};
-    const r=[
-      [`MRP AutoRub – Audit: ${fmtDate(date)}`],[],
-      ['Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM']
-    ];
+    const r=[[`MRP AutoRub – Audit: ${fmtDate(date)}`],[],['Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM']];
     MATS.forEach(mat=>{
       STAGES.forEach(st=>{
         const n=norms[st.key];
         const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return v!==''&&v!==undefined&&v!==null?Number(v):'';});
-        r.push([mat,st.label,n!==''&&n!==null?`<${n}`:'–',...vals]);
-      });
-      r.push([]);
+        r.push([mat,st.label,n!==''&&n!==null?'<'+n:'–',...vals]);
+      });r.push([]);
     });
     const ws2=XLSX.utils.aoa_to_sheet(r);
     ws2['!cols']=[12,28,8,10,10,10].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,ws2,date.replace(/-/g,'.').slice(0,31));
   });
-  XLSX.writeFile(wb,`MRP_Audit_${today}.xlsx`);
+  XLSX.writeFile(wb,'MRP_Audit_'+today+'.xlsx');
   toast('✓ Excel report downloaded','success');
 }
 
-// Toast
 let tTimer;
 function toast(msg,type='success'){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.className=`toast ${type} show`;
-  clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),2800);
+  t.textContent=msg;t.className='toast '+type+' show';
+  clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-init();
+function boot(){
+  norms=lsGet(NK)||{...DN};
+  today=todayKey();curSlot=slotIdx();
+  renderAll();
+  waitForFirebase(()=>{
+    startRealtimeSync();
+    setTimeout(()=>{
+      const ls=document.getElementById('loadingScreen');
+      ls.classList.add('hide');
+      setTimeout(()=>ls.remove(),500);
+    },1500);
+  });
+  setInterval(()=>{curSlot=slotIdx();today=todayKey();renderAll();subscribeToday();},60000);
+}
+boot();
 </script>
 </body>
 </html>
