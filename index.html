@@ -4,9 +4,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MRP AutoRub – Daily Audit</title>
+<title>MRP AutoRub – Production Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -20,7 +20,7 @@ const firebaseConfig = {
   appId: "1:556134876213:web:64e50c9be285a549aa9d7c"
 };
 const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const db = getFirestore(app);
 window._db=db; window._doc=doc; window._setDoc=setDoc; window._getDoc=getDoc;
 window._onSnapshot=onSnapshot; window._collection=collection; window._getDocs=getDocs;
 window._firebaseReady=true;
@@ -29,261 +29,555 @@ window.dispatchEvent(new Event('firebase-ready'));
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--border2:#cbd5e1;
-  --accent:#1d4ed8;--accent-light:#eff6ff;
-  --green:#16a34a;--green-light:#f0fdf4;
-  --red:#dc2626;--red-light:#fef2f2;--red-mid:#fecaca;
-  --amber:#d97706;--amber-light:#fffbeb;--amber-mid:#fde68a;
-  --text:#0f172a;--text2:#334155;--muted:#64748b;--muted2:#94a3b8;
-  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
-  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
-  --shadow-md:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -1px rgba(0,0,0,.05);
-  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.08),0 4px 6px -2px rgba(0,0,0,.04);
+  --bg:#F7F6F3;
+  --surface:#FFFFFF;
+  --surface2:#F0EEE9;
+  --border:#E2DDD6;
+  --border2:#CCC8C0;
+  --ink:#1A1714;
+  --ink2:#3D3A36;
+  --ink3:#6B6660;
+  --ink4:#9C9690;
+  --accent:#C41E3A;
+  --accent2:#E8354F;
+  --accent-bg:#FDF0F2;
+  --accent-border:#F5C0C8;
+  --gold:#B8860B;
+  --gold-bg:#FDF8EC;
+  --green:#1A6B3C;
+  --green-bg:#EDF7F2;
+  --green-border:#A8D5BC;
+  --amber:#B85C00;
+  --amber-bg:#FEF3E8;
+  --amber-border:#F5C896;
+  --blue:#1A3D6B;
+  --blue-bg:#EDF2F9;
+  --blue-border:#A8C0DC;
+  --font-display:'Playfair Display',serif;
+  --font:'IBM Plex Sans',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --shadow:0 1px 3px rgba(26,23,20,.06),0 1px 2px rgba(26,23,20,.04);
+  --shadow-md:0 4px 12px rgba(26,23,20,.08),0 2px 4px rgba(26,23,20,.04);
+  --shadow-lg:0 12px 32px rgba(26,23,20,.12),0 4px 8px rgba(26,23,20,.06);
 }
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:14px;}
-#loadingScreen{position:fixed;inset:0;background:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px;transition:opacity .5s;}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);min-height:100vh;font-size:14px;padding-bottom:72px;}
+
+/* Loading */
+#loadingScreen{position:fixed;inset:0;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:20px;transition:opacity .6s;}
 #loadingScreen.hide{opacity:0;pointer-events:none;}
-.load-logo{width:64px;height:64px;background:rgba(255,255,255,.18);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.3);}
-.load-title{color:#fff;font-size:20px;font-weight:700;}
-.load-sub{color:rgba(255,255,255,.65);font-size:13px;}
-.spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+.load-logo{font-family:var(--font-display);font-size:32px;color:#fff;letter-spacing:-.02em;}
+.load-sub{color:rgba(255,255,255,.45);font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;}
+.spinner{width:28px;height:28px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.topbar{background:var(--accent);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(29,78,216,.3);}
-.topbar-left{display:flex;align-items:center;gap:14px;}
-.topbar-logo{width:36px;height:36px;background:rgba(255,255,255,.18);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.25);}
-.topbar-brand{color:rgba(255,255,255,.65);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
-.topbar-title{color:#fff;font-size:16px;font-weight:700;margin-top:1px;}
-.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.topbar-date{color:rgba(255,255,255,.8);font-family:var(--mono);font-size:12px;padding:5px 11px;background:rgba(255,255,255,.12);border-radius:6px;border:1px solid rgba(255,255,255,.18);}
-.sync-badge{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.18);transition:all .3s;}
-.sync-badge.synced{background:rgba(34,197,94,.25);color:#86efac;}
-.sync-badge.syncing{background:rgba(251,191,36,.2);color:#fcd34d;}
-.sync-badge.offline{background:rgba(239,68,68,.2);color:#fca5a5;}
-.sdot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+
+/* Topbar */
+.topbar{background:var(--ink);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-left{display:flex;flex-direction:column;gap:2px;}
+.topbar-co{font-size:10px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:.14em;text-transform:uppercase;}
+.topbar-title{font-family:var(--font-display);font-size:17px;color:#fff;letter-spacing:-.01em;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.topbar-date{color:rgba(255,255,255,.55);font-family:var(--mono);font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border-radius:4px;border:1px solid rgba(255,255,255,.1);}
+.sync-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;border:1px solid rgba(255,255,255,.1);transition:all .3s;letter-spacing:.04em;}
+.sync-pill.synced{background:rgba(26,107,60,.25);color:#6ee7a8;border-color:rgba(26,107,60,.3);}
+.sync-pill.syncing{background:rgba(184,92,0,.2);color:#fbbf72;border-color:rgba(184,92,0,.25);}
+.sync-pill.offline{background:rgba(196,30,58,.2);color:#fca5a5;border-color:rgba(196,30,58,.25);}
+.sdot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .sdot.anim{animation:pulse 1.2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-.main{max-width:980px;margin:0 auto;padding:24px 16px 48px;}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
-.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:13px 13px 0 0;}
-.stat-card.cb::after{background:var(--accent);}
-.stat-card.cg::after{background:var(--green);}
-.stat-card.cr::after{background:var(--red);}
-.stat-card.ca::after{background:var(--amber);}
-.sicon{position:absolute;right:14px;top:16px;font-size:22px;opacity:.12;}
-.slabel{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
-.snum{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1;}
-.snum.cb{color:var(--accent);} .snum.cg{color:var(--green);} .snum.cr{color:var(--red);} .snum.ca{color:var(--amber);}
-.ssub2{font-size:11px;color:var(--muted);margin-top:6px;}
-.action-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap;}
-.slot-group{display:flex;align-items:center;gap:10px;}
-.slot-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
-.slot-chips{display:flex;gap:7px;}
-.chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;font-family:var(--mono);border:1.5px solid var(--border2);color:var(--muted);background:var(--surface);transition:all .2s;}
-.chip.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(29,78,216,.28);}
-.pdot{display:inline-block;width:6px;height:6px;background:#fff;border-radius:50%;margin-left:5px;vertical-align:middle;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* Bottom Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:var(--ink);display:flex;z-index:50;border-top:1px solid rgba(255,255,255,.08);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:none;background:transparent;color:rgba(255,255,255,.35);cursor:pointer;font-family:var(--font);font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;transition:all .2s;padding:8px 4px;}
+.nav-btn svg{opacity:.5;transition:opacity .2s;}
+.nav-btn.active{color:#fff;}
+.nav-btn.active svg{opacity:1;}
+.nav-btn.active::after{content:'';position:absolute;top:0;width:32px;height:2px;background:var(--accent);border-radius:0 0 2px 2px;}
+
+/* Pages */
+.page{display:none;animation:fadeIn .25s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.page-inner{max-width:960px;margin:0 auto;padding:20px 16px;}
+
+/* Page header */
+.page-hdr{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.page-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-tag{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;}
+.page-title{font-family:var(--font-display);font-size:24px;color:var(--ink);letter-spacing:-.02em;line-height:1.2;}
+.page-sub{font-size:13px;color:var(--ink3);margin-top:4px;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:6px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:.04em;text-transform:uppercase;}
+.btn-primary{background:var(--ink);color:#fff;}
+.btn-primary:hover{background:var(--ink2);}
+.btn-outline{background:transparent;color:var(--ink2);border:1.5px solid var(--border2);}
+.btn-outline:hover{border-color:var(--ink);color:var(--ink);}
+.btn-danger{background:var(--accent);color:#fff;}
+.btn-danger:hover{background:var(--accent2);}
+.btn-ghost{background:var(--surface2);color:var(--ink2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--border);}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap;}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-.btn-ghost{background:var(--surface);color:var(--text2);border:1.5px solid var(--border2);box-shadow:var(--shadow);}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
-.btn-save{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.22);}
-.btn-save:hover{background:#15803d;}
-.mat-section{margin-bottom:22px;}
-.mat-header-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-.mat-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;}
-.mat-pill.epdm{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;}
-.mat-pill.silicone{background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;}
-.mat-line{flex:1;height:1px;background:var(--border);}
-.table-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden;}
-.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-table{width:100%;border-collapse:collapse;min-width:520px;}
-thead tr{background:var(--surface2);border-bottom:2px solid var(--border);}
-th{padding:11px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);white-space:nowrap;}
-th.th-stage{text-align:left;padding-left:20px;min-width:210px;}
-th.th-norm{min-width:72px;} th.th-slot{min-width:96px;}
-th.th-slot.ath{color:var(--accent);background:rgba(29,78,216,.04);}
+
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.s-red::before{background:var(--accent);}
+.stat-card.s-green::before{background:var(--green);}
+.stat-card.s-amber::before{background:var(--amber);}
+.stat-card.s-blue::before{background:var(--blue);}
+.stat-card.s-gold::before{background:var(--gold);}
+.slabel{font-size:10px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.sval{font-family:var(--mono);font-size:26px;font-weight:500;line-height:1;color:var(--ink);}
+.sval.red{color:var(--accent);}
+.sval.green{color:var(--green);}
+.sval.amber{color:var(--amber);}
+.sval.blue{color:var(--blue);}
+.ssub{font-size:11px;color:var(--ink4);margin-top:6px;}
+
+/* Section headers */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:24px;}
+.sec-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:8px;}
+.sec-title::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px;}
+
+/* Table card */
+.tcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px;}
+.twrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;min-width:480px;}
+thead tr{background:var(--surface2);border-bottom:1.5px solid var(--border);}
+th{padding:10px 14px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);white-space:nowrap;}
+th.th-l{text-align:left;padding-left:18px;}
+th.th-active{color:var(--accent);background:var(--accent-bg);}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
-tbody tr:hover{background:#f8fafc;}
-tbody tr.brow{background:rgba(220,38,38,.025);}
-td{padding:10px 14px;vertical-align:middle;}
-td.td-stage{padding-left:20px;}
-.sname{font-size:13px;font-weight:500;color:var(--text2);}
-.ssub{font-size:11px;color:var(--muted2);margin-top:2px;}
-td.td-norm{text-align:center;}
-.npill{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:12px;font-weight:600;background:var(--amber-light);color:var(--amber);border:1px solid var(--amber-mid);}
-td.td-inp{text-align:center;padding:7px 8px;}
-td.td-inp.acol{background:rgba(29,78,216,.03);}
+tbody tr:hover{background:var(--surface2);}
+tbody tr.breach-row{background:rgba(196,30,58,.03);}
+td{padding:10px 14px;vertical-align:middle;font-size:13px;}
+td.td-l{padding-left:18px;}
+.sname{font-size:13px;font-weight:500;color:var(--ink2);}
+.ssub2{font-size:11px;color:var(--ink4);margin-top:2px;}
+td.td-c{text-align:center;}
+.npill{display:inline-block;padding:2px 9px;border-radius:20px;font-family:var(--mono);font-size:11px;font-weight:500;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
 .inp-wrap{display:flex;justify-content:center;}
-.sinp{width:74px;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;font-weight:500;text-align:center;outline:none;transition:all .15s;-moz-appearance:textfield;}
+.sinp{width:70px;padding:7px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:13px;font-weight:500;text-align:center;outline:none;transition:all .15s;-moz-appearance:textfield;}
 .sinp::-webkit-inner-spin-button,.sinp::-webkit-outer-spin-button{-webkit-appearance:none;}
-.sinp:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
-.sinp.sa{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.08);}
-.sinp.sok{border-color:var(--green);background:var(--green-light);color:var(--green);}
-.sinp.sbr{border-color:var(--red);background:var(--red-light);color:var(--red);font-weight:700;}
-.toast{position:fixed;bottom:26px;right:26px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:9998;display:flex;align-items:center;gap:8px;}
+.sinp:focus{border-color:var(--ink);background:#fff;box-shadow:0 0 0 3px rgba(26,23,20,.06);}
+.sinp.sa{border-color:var(--blue);background:var(--blue-bg);}
+.sinp.sok{border-color:var(--green);background:var(--green-bg);color:var(--green);}
+.sinp.sbr{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:600;}
+td.acol{background:rgba(26,61,107,.03);}
+
+/* Slot chips */
+.slot-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.slot-lbl{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);}
+.slot-chips{display:flex;gap:6px;}
+.chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--mono);border:1.5px solid var(--border2);color:var(--ink4);background:var(--surface);transition:all .2s;letter-spacing:.04em;}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.pdot{display:inline-block;width:5px;height:5px;background:#fff;border-radius:50%;margin-left:4px;vertical-align:middle;animation:pulse 1.5s infinite;}
+
+/* Material pills */
+.mat-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.mpill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+.mpill.epdm{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);}
+.mpill.silicone{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.mline{flex:1;height:1px;background:var(--border);}
+
+/* Toast */
+.toast{position:fixed;bottom:76px;right:16px;padding:11px 18px;border-radius:8px;font-size:12px;font-weight:600;letter-spacing:.04em;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(6px);transition:all .3s;pointer-events:none;z-index:9998;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{background:var(--green);color:#fff;}
-.toast.error{background:var(--red);color:#fff;}
-.toast.info{background:var(--accent);color:#fff;}
-.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);}
+.toast.error{background:var(--accent);color:#fff;}
+.toast.info{background:var(--ink);color:#fff;}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(26,23,20,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
 .overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .2s ease;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .2s ease;}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.mtitle{font-size:17px;font-weight:700;}
-.mdesc{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
-.cbtn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
-.cbtn:hover{background:var(--red-light);border-color:var(--red-mid);color:var(--red);}
-.nrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
-.nrow:last-of-type{border-bottom:none;}
-.nrlbl{font-size:13px;font-weight:500;color:var(--text2);}
-.nrgrp{display:flex;align-items:center;gap:7px;}
-.nlt{font-family:var(--mono);font-weight:700;color:var(--amber);font-size:16px;}
-.ninp{width:66px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;text-align:center;outline:none;}
-.ninp:focus{border-color:var(--accent);background:#fff;}
-.msave{width:100%;margin-top:22px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
-.msave:hover{background:#1e40af;}
-.hmodal{max-width:740px;}
-.dscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;}
+.mhdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;}
+.mtitle{font-family:var(--font-display);font-size:20px;color:var(--ink);letter-spacing:-.01em;}
+.mdesc{font-size:13px;color:var(--ink3);margin-bottom:22px;line-height:1.6;}
+.cbtn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--ink3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.cbtn:hover{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);}
+.form-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);}
+.form-row:last-of-type{border-bottom:none;}
+.form-lbl{font-size:13px;font-weight:500;color:var(--ink2);}
+.form-sub{font-size:11px;color:var(--ink4);margin-top:2px;}
+.finp{padding:7px 11px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s;min-width:120px;}
+.finp:focus{border-color:var(--ink);background:#fff;}
+.finp.fw{width:100%;margin-top:8px;min-width:unset;}
+.msave{width:100%;margin-top:22px;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);letter-spacing:.08em;text-transform:uppercase;transition:background .15s;}
+.msave:hover{background:var(--ink2);}
+
+/* DWM specific */
+.dwm-station{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
+.dwm-station-hdr{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.dwm-station-name{font-size:13px;font-weight:600;color:var(--ink2);}
+.dwm-station-target{font-size:11px;color:var(--ink4);font-family:var(--mono);}
+.dwm-inputs{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;padding:12px 16px;}
+.dwm-hr{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.dwm-hr-lbl{font-size:9px;font-weight:600;color:var(--ink4);letter-spacing:.06em;}
+.dwm-inp{width:100%;padding:6px 4px;border-radius:5px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:11px;text-align:center;outline:none;transition:all .15s;-moz-appearance:textfield;}
+.dwm-inp::-webkit-inner-spin-button,.dwm-inp::-webkit-outer-spin-button{-webkit-appearance:none;}
+.dwm-inp:focus{border-color:var(--ink);background:#fff;}
+.dwm-inp.d-ok{border-color:var(--green);background:var(--green-bg);color:var(--green);}
+.dwm-inp.d-low{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);}
+.dwm-footer{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);flex-wrap:wrap;}
+.dwm-stat{display:flex;flex-direction:column;gap:2px;}
+.dwm-stat-lbl{font-size:9px;font-weight:600;color:var(--ink4);text-transform:uppercase;letter-spacing:.1em;}
+.dwm-stat-val{font-size:14px;font-weight:600;font-family:var(--mono);color:var(--ink);}
+.dwm-stat-val.good{color:var(--green);}
+.dwm-stat-val.bad{color:var(--accent);}
+.eff-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:80px;}
+.eff-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.eff-fill.good{background:var(--green);}
+.eff-fill.mid{background:var(--amber);}
+.eff-fill.bad{background:var(--accent);}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:var(--shadow);}
+.dash-card-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:16px;}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.gauge-val{font-family:var(--font-display);font-size:36px;color:var(--ink);letter-spacing:-.02em;}
+.gauge-label{font-size:11px;color:var(--ink4);}
+.gauge-bar{width:100%;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+.gauge-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+.inspector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.inspector-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:var(--shadow);transition:box-shadow .2s;}
+.inspector-card:hover{box-shadow:var(--shadow-md);}
+.insp-name{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:2px;}
+.insp-type{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:12px;}
+.insp-stat{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+.insp-stat:last-child{border-bottom:none;}
+.insp-stat-lbl{font-size:11px;color:var(--ink3);}
+.insp-stat-val{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--ink);}
+.insp-stat-val.good{color:var(--green);}
+.insp-stat-val.bad{color:var(--accent);}
+.insp-stat-val.mid{color:var(--amber);}
+
+/* Reports */
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;}
+.report-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;}
+.report-desc{font-size:13px;color:var(--ink4);margin-bottom:16px;line-height:1.6;}
+.whatsapp-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;color:var(--ink2);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;max-height:200px;overflow-y:auto;}
+.heatmap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.hmap-day{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;font-family:var(--mono);cursor:default;transition:transform .15s;}
+.hmap-day:hover{transform:scale(1.15);}
+.hmap-empty{background:var(--surface2);color:var(--ink4);}
+.hmap-good{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.hmap-mid{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.hmap-bad{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border);}
+.hmap-none{background:var(--border);color:var(--ink4);}
+
+/* History modal */
+.hmodal{max-width:760px;}
+.dscroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;}
 .dscroll::-webkit-scrollbar{height:3px;}
 .dscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-.dbtn{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;font-family:var(--mono);transition:all .15s;}
-.dbtn:hover{border-color:var(--accent);color:var(--accent);}
-.dbtn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.hmat{margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.hmathd{padding:10px 14px;background:var(--surface2);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);}
+.dbtn{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid var(--border2);background:var(--surface2);color:var(--ink4);cursor:pointer;font-family:var(--mono);transition:all .15s;}
+.dbtn:hover{border-color:var(--ink);color:var(--ink);}
+.dbtn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.hist-mat{margin-bottom:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.hmathd{padding:10px 14px;background:var(--surface2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);border-bottom:1px solid var(--border);}
 .htbl{width:100%;border-collapse:collapse;}
-.htbl th{padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;text-align:center;border-bottom:1px solid var(--border);}
+.htbl th{padding:8px 12px;background:var(--surface2);color:var(--ink4);font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:center;border-bottom:1px solid var(--border);}
 .htbl th:first-child{text-align:left;}
-.htbl td{padding:8px 12px;border-top:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);}
+.htbl td{padding:8px 12px;border-top:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink2);}
 .htbl td:first-child{text-align:left;font-family:var(--font);font-size:12px;}
-.hok{color:var(--green);font-weight:600;} .hbr{color:var(--red);font-weight:700;} .hemp{color:var(--muted2);}
-.nohist{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+.hok{color:var(--green);font-weight:600;}
+.hbr{color:var(--accent);font-weight:700;}
+.hemp{color:var(--ink4);}
+.nohist{text-align:center;padding:40px 20px;color:var(--ink4);font-size:14px;}
+
+/* Config modal station list */
+.station-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:12px;}
+.station-item{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;}
+.station-item input[type=text]{flex:1;padding:6px 10px;border-radius:5px;border:1.5px solid var(--border);background:#fff;font-family:var(--font);font-size:13px;outline:none;}
+.station-item input[type=text]:focus{border-color:var(--ink);}
+.station-item input[type=number]{width:80px;padding:6px 8px;border-radius:5px;border:1.5px solid var(--border);background:#fff;font-family:var(--mono);font-size:13px;text-align:center;outline:none;-moz-appearance:textfield;}
+.station-item input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+.station-item input[type=number]:focus{border-color:var(--ink);}
+.rm-btn{width:26px;height:26px;border-radius:5px;border:none;background:var(--accent-bg);color:var(--accent);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.add-station-btn{width:100%;padding:9px;border-radius:8px;border:1.5px dashed var(--border2);background:transparent;color:var(--ink3);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.06em;transition:all .15s;}
+.add-station-btn:hover{border-color:var(--ink);color:var(--ink);}
+
 @media(max-width:680px){
-  .stats-row{grid-template-columns:1fr 1fr;}
-  .topbar-brand{display:none;}
-  .action-bar{flex-direction:column;align-items:flex-start;}
-  .btn-group{width:100%;}
-  .btn{flex:1;justify-content:center;}
-  .snum{font-size:22px;}
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .dash-grid{grid-template-columns:1fr;}
+  .dwm-inputs{grid-template-columns:repeat(6,1fr);}
+  .sval{font-size:20px;}
+  .topbar-co{display:none;}
 }
-@media(max-width:400px){.stats-row{grid-template-columns:1fr;}}
+@media(max-width:400px){
+  .stat-grid{grid-template-columns:1fr;}
+  .dwm-inputs{grid-template-columns:repeat(4,1fr);}
+}
 </style>
 </head>
 <body>
 
 <div id="loadingScreen">
-  <div class="load-logo">MR</div>
-  <div class="load-title">MRP AutoRub Daily Audit</div>
+  <div class="load-logo">MRP AutoRub</div>
   <div class="spinner"></div>
-  <div class="load-sub">Connecting to database…</div>
+  <div class="load-sub">Connecting to production database</div>
 </div>
 
+<!-- Topbar -->
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-logo">MR</div>
-    <div>
-      <div class="topbar-brand">MRP AutoRub Pvt Ltd</div>
-      <div class="topbar-title">Daily Production Audit</div>
-    </div>
+    <div class="topbar-co">MRP AutoRub Pvt Ltd</div>
+    <div class="topbar-title">Production Intelligence</div>
   </div>
   <div class="topbar-right">
     <div class="topbar-date" id="topbarDate">—</div>
-    <div class="sync-badge syncing" id="syncBadge">
+    <div class="sync-pill syncing" id="syncBadge">
       <span class="sdot anim"></span>
-      <span id="syncText">Connecting…</span>
+      <span id="syncText">Connecting</span>
     </div>
   </div>
 </div>
 
-<div class="main">
-  <div class="stats-row">
-    <div class="stat-card cb"><div class="sicon">📋</div><div class="slabel">Entries Today</div>
-      <div class="snum cb"><span id="sFilled">0</span><span style="font-size:15px;color:var(--muted);font-weight:500" id="sTotal"> / 30</span></div>
-      <div class="ssub2" id="sPct">0% complete</div></div>
-    <div class="stat-card cg" id="breachCard"><div class="sicon">✅</div><div class="slabel">Norm Breaches</div>
-      <div class="snum cg" id="sBreaches">0</div><div class="ssub2" id="sBreachSub">All within limits ✓</div></div>
-    <div class="stat-card ca"><div class="sicon">🕐</div><div class="slabel">Active Slot</div>
-      <div class="snum ca" style="font-size:17px;padding-top:4px" id="sSlot">—</div>
-      <div class="ssub2">Current time window</div></div>
-    <div class="stat-card cb"><div class="sicon">📅</div><div class="slabel">Days Recorded</div>
-      <div class="snum cb" id="sDays">0</div><div class="ssub2">Total audit history</div></div>
-  </div>
+<!-- Pages -->
 
-  <div class="action-bar">
-    <div class="slot-group">
-      <span class="slot-lbl">Slots:</span>
-      <div class="slot-chips">
-        <span class="chip" id="chip0">9:30 AM</span>
-        <span class="chip" id="chip1">1:00 PM</span>
-        <span class="chip" id="chip2">4:00 PM</span>
+<!-- PAGE: AUDIT -->
+<div class="page active" id="page-audit">
+<div class="page-inner">
+  <div class="page-hdr">
+    <div class="page-hdr-top">
+      <div>
+        <div class="page-tag">Daily Audit</div>
+        <div class="page-title">Trolley Bottleneck Audit</div>
+        <div class="page-sub">Monitor WIP trolley counts across all production stages</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="openHistory()">History</button>
+        <button class="btn btn-outline" onclick="openNorms()">Edit Norms</button>
+        <button class="btn btn-outline" onclick="exportExcel()">Export</button>
+        <button class="btn btn-primary" onclick="saveToCloud()">Sync</button>
       </div>
     </div>
-    <div class="btn-group">
-      <button class="btn btn-ghost" onclick="openHistory()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>History
-      </button>
-      <button class="btn btn-ghost" onclick="openNorms()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>Edit Norms
-      </button>
-      <button class="btn btn-ghost" onclick="exportExcel()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel
-      </button>
-      <button class="btn btn-save" onclick="saveToCloud()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Sync Now
-      </button>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card s-blue">
+      <div class="slabel">Entries Today</div>
+      <div class="sval blue"><span id="sFilled">0</span><span style="font-size:14px;color:var(--ink4);font-weight:400" id="sTotal"> / 30</span></div>
+      <div class="ssub" id="sPct">0% complete</div>
+    </div>
+    <div class="stat-card s-green" id="breachCard">
+      <div class="slabel">Norm Breaches</div>
+      <div class="sval green" id="sBreaches">0</div>
+      <div class="ssub" id="sBreachSub">All within limits</div>
+    </div>
+    <div class="stat-card s-amber">
+      <div class="slabel">Active Time Slot</div>
+      <div class="sval amber" style="font-size:15px;padding-top:4px" id="sSlot">—</div>
+      <div class="ssub">Current window</div>
+    </div>
+    <div class="stat-card s-blue">
+      <div class="slabel">Days Recorded</div>
+      <div class="sval blue" id="sDays">0</div>
+      <div class="ssub">Total audit history</div>
     </div>
   </div>
 
-  <div class="mat-section">
-    <div class="mat-header-row"><div class="mat-pill epdm">🔵 EPDM</div><div class="mat-line"></div></div>
-    <div class="table-card"><div class="tbl-wrap">
-      <table><thead><tr>
-        <th class="th-stage">Stage</th><th class="th-norm">Norm</th>
-        <th class="th-slot" id="th-EPDM-0">9:30 AM</th>
-        <th class="th-slot" id="th-EPDM-1">1:00 PM</th>
-        <th class="th-slot" id="th-EPDM-2">4:00 PM</th>
-      </tr></thead><tbody id="body-EPDM"></tbody></table>
-    </div></div>
+  <div class="slot-row">
+    <span class="slot-lbl">Time Slots</span>
+    <div class="slot-chips">
+      <span class="chip" id="chip0">9:30 AM</span>
+      <span class="chip" id="chip1">1:00 PM</span>
+      <span class="chip" id="chip2">4:00 PM</span>
+    </div>
   </div>
 
-  <div class="mat-section">
-    <div class="mat-header-row"><div class="mat-pill silicone">🟢 Silicone</div><div class="mat-line"></div></div>
-    <div class="table-card"><div class="tbl-wrap">
-      <table><thead><tr>
-        <th class="th-stage">Stage</th><th class="th-norm">Norm</th>
-        <th class="th-slot" id="th-Silicone-0">9:30 AM</th>
-        <th class="th-slot" id="th-Silicone-1">1:00 PM</th>
-        <th class="th-slot" id="th-Silicone-2">4:00 PM</th>
-      </tr></thead><tbody id="body-Silicone"></tbody></table>
-    </div></div>
+  <!-- EPDM -->
+  <div class="mat-row"><div class="mpill epdm">EPDM</div><div class="mline"></div></div>
+  <div class="tcard"><div class="twrap">
+    <table><thead><tr>
+      <th class="th-l">Stage</th><th>Norm</th>
+      <th id="th-EPDM-0">9:30 AM</th>
+      <th id="th-EPDM-1">1:00 PM</th>
+      <th id="th-EPDM-2">4:00 PM</th>
+    </tr></thead><tbody id="body-EPDM"></tbody></table>
+  </div></div>
+
+  <!-- Silicone -->
+  <div class="mat-row"><div class="mpill silicone">Silicone</div><div class="mline"></div></div>
+  <div class="tcard"><div class="twrap">
+    <table><thead><tr>
+      <th class="th-l">Stage</th><th>Norm</th>
+      <th id="th-Silicone-0">9:30 AM</th>
+      <th id="th-Silicone-1">1:00 PM</th>
+      <th id="th-Silicone-2">4:00 PM</th>
+    </tr></thead><tbody id="body-Silicone"></tbody></table>
+  </div></div>
+</div>
+</div>
+
+<!-- PAGE: DWM -->
+<div class="page" id="page-dwm">
+<div class="page-inner">
+  <div class="page-hdr">
+    <div class="page-hdr-top">
+      <div>
+        <div class="page-tag">DWM</div>
+        <div class="page-title">Hourly Production Entry</div>
+        <div class="page-sub">Enter hourly output counts for all active stations</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="openStationConfig()">Configure Stations</button>
+        <button class="btn btn-primary" onclick="saveDWM()">Sync DWM</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card s-blue">
+      <div class="slabel">Total Output Today</div>
+      <div class="sval blue" id="dwmTotal">0</div>
+      <div class="ssub">All stations combined</div>
+    </div>
+    <div class="stat-card s-green">
+      <div class="slabel">Overall Efficiency</div>
+      <div class="sval green" id="dwmEff">—</div>
+      <div class="ssub">vs shift target</div>
+    </div>
+    <div class="stat-card s-amber">
+      <div class="slabel">Active Stations</div>
+      <div class="sval amber" id="dwmActive">0</div>
+      <div class="ssub">Running today</div>
+    </div>
+    <div class="stat-card s-red">
+      <div class="slabel">Below Target</div>
+      <div class="sval red" id="dwmBelow">0</div>
+      <div class="ssub">Stations underperforming</div>
+    </div>
+  </div>
+
+  <div id="dwmSections"></div>
+</div>
+</div>
+
+<!-- PAGE: DASHBOARD -->
+<div class="page" id="page-dash">
+<div class="page-inner">
+  <div class="page-hdr">
+    <div class="page-hdr-top">
+      <div>
+        <div class="page-tag">Dashboard</div>
+        <div class="page-title">Line Efficiency Overview</div>
+        <div class="page-sub">Live production performance across all sections</div>
+      </div>
+      <button class="btn btn-outline" onclick="refreshDash()">Refresh</button>
+    </div>
+  </div>
+
+  <div class="dash-grid" id="dashGauges"></div>
+
+  <div class="sec-hdr"><span class="sec-title">Inspector Performance</span></div>
+  <div class="inspector-grid" id="inspectorCards"></div>
+
+  <div class="sec-hdr"><span class="sec-title">Bottleneck Trend — Last 7 Days</span></div>
+  <div class="tcard" style="padding:20px">
+    <div id="trendChart" style="font-size:13px;color:var(--ink3);text-align:center;padding:20px">Fill audit data for multiple days to see trends</div>
   </div>
 </div>
+</div>
+
+<!-- PAGE: REPORTS -->
+<div class="page" id="page-reports">
+<div class="page-inner">
+  <div class="page-hdr">
+    <div>
+      <div class="page-tag">Reports</div>
+      <div class="page-title">Reports & Analytics</div>
+      <div class="page-sub">Export data and generate summaries for management</div>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <div class="report-title">WhatsApp Daily Summary</div>
+    <div class="report-desc">Auto-generated end-of-day summary ready to copy and send to your manager.</div>
+    <div class="whatsapp-preview" id="waPreview">Loading summary...</div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="copyWA()">Copy Message</button>
+      <button class="btn btn-outline" onclick="genWA()">Regenerate</button>
+    </div>
+  </div>
+
+  <div class="report-card">
+    <div class="report-title">Breach Heatmap — Last 30 Days</div>
+    <div class="report-desc">Green = no breaches, Amber = some breaches, Red = multiple breaches.</div>
+    <div class="heatmap-grid" id="heatmapGrid"></div>
+  </div>
+
+  <div class="report-card">
+    <div class="report-title">Export to Excel</div>
+    <div class="report-desc">Download a full audit and production report including all dates, efficiency data and inspector performance.</div>
+    <button class="btn btn-primary" onclick="exportExcel()">Download Excel Report</button>
+  </div>
+</div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-audit" onclick="switchPage('audit')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    Audit
+  </button>
+  <button class="nav-btn" id="nav-dwm" onclick="switchPage('dwm')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 17h7M17 14v7"/></svg>
+    DWM
+  </button>
+  <button class="nav-btn" id="nav-dash" onclick="switchPage('dash')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-btn" id="nav-reports" onclick="switchPage('reports')">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Reports
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 
-<div class="overlay" id="normsOv" onclick="closeNorms(event)">
+<!-- Norms Modal -->
+<div class="overlay" id="normsOv" onclick="closeModal('normsOv',event)">
   <div class="modal">
-    <div class="mhdr"><span class="mtitle">⚙️ Edit Stage Norms</span><button class="cbtn" onclick="closeNorms()">✕</button></div>
-    <p class="mdesc">Set the maximum trolley count per stage. Entries above this will be flagged red instantly across all devices.</p>
+    <div class="mhdr"><span class="mtitle">Edit Stage Norms</span><button class="cbtn" onclick="closeModal('normsOv')">✕</button></div>
+    <p class="mdesc">Set the maximum trolley threshold per stage. Values above this will be flagged across all devices.</p>
     <div id="normsForm"></div>
     <button class="msave" onclick="saveNorms()">Save & Sync Norms</button>
   </div>
 </div>
 
-<div class="overlay" id="histOv" onclick="closeHistory(event)">
+<!-- Station Config Modal -->
+<div class="overlay" id="stationOv" onclick="closeModal('stationOv',event)">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle">Configure Stations</span><button class="cbtn" onclick="closeModal('stationOv')">✕</button></div>
+    <p class="mdesc">Set active station names and shift targets. Changes apply to today's DWM entry and efficiency calculations.</p>
+    <div id="stationForm"></div>
+    <button class="msave" onclick="saveStations()">Save Station Config</button>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="overlay" id="histOv" onclick="closeModal('histOv',event)">
   <div class="modal hmodal">
-    <div class="mhdr"><span class="mtitle">📅 Audit History</span><button class="cbtn" onclick="closeHistory()">✕</button></div>
-    <p class="mdesc">All past audit records synced from the cloud. Red values exceeded the norm threshold.</p>
+    <div class="mhdr"><span class="mtitle">Audit History</span><button class="cbtn" onclick="closeModal('histOv')">✕</button></div>
+    <p class="mdesc">Browse all past audit records synced from the cloud.</p>
     <div id="histContent"></div>
   </div>
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════
 const MATS=['EPDM','Silicone'];
 const SLOTS=['9:30 AM','1:00 PM','4:00 PM'];
-const STAGES=[
+const AUDIT_STAGES=[
   {key:'printing',   label:'Waiting for Printing',      sub:'Print queue bottleneck'},
   {key:'inspMixup',  label:'Inspection – Mixup Parts',  sub:'Mixed part hold count'},
   {key:'inspSingle', label:'Inspection – Single Parts', sub:'Single part hold count'},
@@ -291,68 +585,147 @@ const STAGES=[
   {key:'packing',    label:'Waiting for Packing',       sub:'Pre-packing queue'},
 ];
 const NK='mrp_norms_v2';
+const SK='mrp_stations_v1';
 const DN={printing:'',inspMixup:2,inspSingle:5,assembly:2,packing:4};
+const DEFAULT_STATIONS={
+  printing:[
+    {name:'Silicone Printing 1',target:3500,active:true},
+    {name:'EPDM Printing 2',target:5000,active:true},
+    {name:'Marking Print Station 3',target:500,active:true},
+    {name:'Printing 4',target:0,active:false},
+  ],
+  inspection:[
+    {name:'Silicone Insp 1',target:500,active:true,type:'Silicone'},
+    {name:'Silicone Insp 2',target:500,active:true,type:'Silicone'},
+    {name:'Silicone Insp 3',target:500,active:true,type:'Silicone'},
+    {name:'Silicone Insp 4',target:500,active:true,type:'Silicone'},
+    {name:'Silicone Insp 5',target:500,active:true,type:'Silicone'},
+    {name:'EPDM Insp 6',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 7',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 8',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 9',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 10',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 11',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 12',target:800,active:true,type:'EPDM'},
+    {name:'EPDM Insp 13',target:800,active:true,type:'EPDM'},
+  ],
+  assembly:[
+    {name:'Assembly 1',target:0,active:true},
+    {name:'Assembly 2',target:0,active:true},
+    {name:'Assembly 3',target:0,active:false},
+    {name:'Assembly 4',target:0,active:false},
+  ],
+  packing:[
+    {name:'Packing 1',target:0,active:true},
+    {name:'Packing 2',target:0,active:true},
+    {name:'Packing 3',target:0,active:false},
+    {name:'Packing 4',target:0,active:false},
+  ]
+};
 
-let allData={}, norms={...DN}, today=todayKey(), curSlot=slotIdx();
-let saveTimer=null, unsubscribe=null;
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let allAuditData={}, dwmData={}, norms={...DN}, stations=JSON.parse(JSON.stringify(DEFAULT_STATIONS));
+let today=todayKey(), curSlot=slotIdx(), saveTimer=null, unsubAudit=null;
 
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
 function todayKey(){return new Date().toISOString().slice(0,10);}
 function fmtDate(s){return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
 function fmtLong(s){return new Date(s+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}
 function slotIdx(){const m=new Date().getHours()*60+new Date().getMinutes();return m<780?0:m<960?1:2;}
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function pct(val,target){if(!target||target===0)return null;return Math.round(val/target*100);}
+function effColor(p){if(p===null)return'';if(p>=90)return'good';if(p>=70)return'mid';return'bad';}
+function effClass(p){if(p===null)return'';if(p>=90)return'good';if(p>=70)return'mid';return'bad';}
 
+// ══════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════
+function switchPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='dash') refreshDash();
+  if(id==='reports'){genWA();buildHeatmap();}
+}
+
+// ══════════════════════════════════════════════════════════
+// SYNC UI
+// ══════════════════════════════════════════════════════════
 function setSyncStatus(state,text){
   const b=document.getElementById('syncBadge'),t=document.getElementById('syncText'),d=b.querySelector('.sdot');
-  b.className='sync-badge '+state; t.textContent=text;
+  b.className='sync-pill '+state;t.textContent=text;
   d.className='sdot'+(state==='syncing'?' anim':'');
 }
 
 function waitForFirebase(cb){
-  if(window._firebaseReady) cb();
+  if(window._firebaseReady)cb();
   else window.addEventListener('firebase-ready',cb,{once:true});
 }
 
-function startRealtimeSync(){
-  subscribeToday();
-  loadNormsFromCloud();
+// ══════════════════════════════════════════════════════════
+// FIREBASE
+// ══════════════════════════════════════════════════════════
+function startSync(){
+  subscribeAuditToday();
+  loadConfig();
 }
 
-function subscribeToday(){
-  if(unsubscribe) unsubscribe();
+function subscribeAuditToday(){
+  if(unsubAudit)unsubAudit();
   const ref=window._doc(window._db,'audits',today);
-  unsubscribe=window._onSnapshot(ref,snap=>{
-    if(snap.exists()) allData[today]=snap.data();
-    renderAll();
-    setSyncStatus('synced','Live ✓');
-  },()=>{setSyncStatus('offline','Offline');});
+  unsubAudit=window._onSnapshot(ref,snap=>{
+    if(snap.exists())allAuditData[today]=snap.data();
+    renderAudit();setSyncStatus('synced','Live');
+  },()=>setSyncStatus('offline','Offline'));
 }
 
-async function loadNormsFromCloud(){
+async function loadConfig(){
   try{
     const snap=await window._getDoc(window._doc(window._db,'config','norms'));
-    if(snap.exists()) norms=snap.data();
+    if(snap.exists())norms=snap.data();
     else norms=lsGet(NK)||{...DN};
-    renderAll();
   }catch{norms=lsGet(NK)||{...DN};}
+  try{
+    const snap=await window._getDoc(window._doc(window._db,'config','stations'));
+    if(snap.exists())stations=snap.data();
+    else stations=lsGet(SK)||JSON.parse(JSON.stringify(DEFAULT_STATIONS));
+  }catch{stations=lsGet(SK)||JSON.parse(JSON.stringify(DEFAULT_STATIONS));}
+  try{
+    const snap=await window._getDoc(window._doc(window._db,'dwm',today));
+    if(snap.exists())dwmData=snap.data();
+  }catch{}
+  renderAudit();renderDWM();
 }
 
 async function loadAllHistory(){
   try{
     const snap=await window._getDocs(window._collection(window._db,'audits'));
-    snap.forEach(d=>{allData[d.id]=d.data();});
-    updateStatDays();
-  }catch(e){console.warn('history load failed',e);}
+    snap.forEach(d=>{allAuditData[d.id]=d.data();});
+  }catch(e){console.warn(e);}
 }
 
 async function saveToCloud(){
-  setSyncStatus('syncing','Saving…');
+  setSyncStatus('syncing','Saving...');
   try{
-    await window._setDoc(window._doc(window._db,'audits',today),allData[today]||{});
-    setSyncStatus('synced','Saved ✓');
-    toast('✓ Synced — all 15 devices updated instantly','success');
-  }catch{setSyncStatus('offline','Save failed');toast('Save failed — check connection','error');}
+    await window._setDoc(window._doc(window._db,'audits',today),allAuditData[today]||{});
+    setSyncStatus('synced','Saved');
+    toast('Synced to cloud — all devices updated','success');
+  }catch{setSyncStatus('offline','Failed');toast('Save failed — check connection','error');}
+}
+
+async function saveDWM(){
+  setSyncStatus('syncing','Saving...');
+  try{
+    await window._setDoc(window._doc(window._db,'dwm',today),dwmData);
+    setSyncStatus('synced','Saved');
+    toast('DWM data synced','success');
+  }catch{toast('Save failed','error');}
 }
 
 function scheduleAutoSave(){
@@ -360,7 +733,10 @@ function scheduleAutoSave(){
   saveTimer=setTimeout(()=>{if(window._firebaseReady)saveToCloud();},3000);
 }
 
-function renderAll(){
+// ══════════════════════════════════════════════════════════
+// AUDIT RENDER
+// ══════════════════════════════════════════════════════════
+function renderAudit(){
   document.getElementById('topbarDate').textContent=fmtDate(today);
   SLOTS.forEach((s,i)=>{
     const c=document.getElementById('chip'+i);
@@ -368,27 +744,27 @@ function renderAll(){
     c.className='chip'+(i===curSlot?' active':'');
     MATS.forEach(m=>{
       const th=document.getElementById('th-'+m+'-'+i);
-      if(th){th.className='th-slot'+(i===curSlot?' ath':'');th.textContent=s+(i===curSlot?' ●':'');}
+      if(th){th.className=i===curSlot?'th-active':'';th.textContent=s+(i===curSlot?' •':'');}
     });
   });
-  MATS.forEach(m=>buildTable(m));
-  updateStats();
+  MATS.forEach(m=>buildAuditTable(m));
+  updateAuditStats();
 }
 
-function buildTable(mat){
+function buildAuditTable(mat){
   const tbody=document.getElementById('body-'+mat);
   tbody.innerHTML='';
-  const md=allData[today]?.[mat]||{};
-  STAGES.forEach(st=>{
+  const md=allAuditData[today]?.[mat]||{};
+  AUDIT_STAGES.forEach(st=>{
     const norm=norms[st.key];
     const tr=document.createElement('tr');
-    const tds=document.createElement('td');tds.className='td-stage';
-    tds.innerHTML='<div class="sname">'+st.label+'</div><div class="ssub">'+st.sub+'</div>';
+    const tds=document.createElement('td');tds.className='td-l';
+    tds.innerHTML='<div class="sname">'+st.label+'</div><div class="ssub2">'+st.sub+'</div>';
     tr.appendChild(tds);
-    const tdn=document.createElement('td');tdn.className='td-norm';
+    const tdn=document.createElement('td');tdn.className='td-c';
     tdn.innerHTML=(norm!==''&&norm!==null&&norm!==undefined)
       ?'<span class="npill">&lt;'+norm+'</span>'
-      :'<span style="color:var(--muted2);font-size:12px">–</span>';
+      :'<span style="color:var(--ink4);font-size:11px">—</span>';
     tr.appendChild(tdn);
     let hasBreach=false;
     SLOTS.forEach((slot,i)=>{
@@ -396,80 +772,645 @@ function buildTable(mat){
       const isNum=val!==''&&val!==null&&val!==undefined;
       const breach=isNum&&norm!==''&&norm!==null&&Number(val)>Number(norm);
       if(breach)hasBreach=true;
-      const tdi=document.createElement('td');tdi.className='td-inp'+(i===curSlot?' acol':'');
+      const tdi=document.createElement('td');tdi.className='td-c'+(i===curSlot?' acol':'');
       const inp=document.createElement('input');
       inp.type='number';inp.min='0';inp.placeholder='—';inp.value=val;
       inp.className='sinp'+(i===curSlot?' sa':'')+(breach?' sbr':isNum?' sok':'');
       inp.dataset.mat=mat;inp.dataset.stage=st.key;inp.dataset.slot=slot;inp.dataset.idx=i;
-      inp.addEventListener('input',onInput);
+      inp.addEventListener('input',onAuditInput);
       const w=document.createElement('div');w.className='inp-wrap';w.appendChild(inp);
       tdi.appendChild(w);tr.appendChild(tdi);
     });
-    if(hasBreach)tr.classList.add('brow');
+    if(hasBreach)tr.classList.add('breach-row');
     tbody.appendChild(tr);
   });
 }
 
-function onInput(e){
-  const {mat,stage,slot,idx}=e.target.dataset, val=e.target.value;
-  if(!allData[today])allData[today]={};
-  if(!allData[today][mat])allData[today][mat]={};
-  if(!allData[today][mat][stage])allData[today][mat][stage]={};
-  allData[today][mat][stage][slot]=val;
+function onAuditInput(e){
+  const {mat,stage,slot,idx}=e.target.dataset,val=e.target.value;
+  if(!allAuditData[today])allAuditData[today]={};
+  if(!allAuditData[today][mat])allAuditData[today][mat]={};
+  if(!allAuditData[today][mat][stage])allAuditData[today][mat][stage]={};
+  allAuditData[today][mat][stage][slot]=val;
   const norm=norms[stage],isNum=val!=='',breach=isNum&&norm!==''&&norm!==null&&Number(val)>Number(norm);
   e.target.className='sinp'+(Number(idx)===curSlot?' sa':'')+(breach?' sbr':isNum?' sok':'');
-  setSyncStatus('syncing','Unsaved…');
-  updateStats();
-  scheduleAutoSave();
+  setSyncStatus('syncing','Unsaved');updateAuditStats();scheduleAutoSave();
 }
 
-function updateStats(){
-  const dd=allData[today]||{};
+function updateAuditStats(){
+  const dd=allAuditData[today]||{};
   let filled=0,total=0,breaches=0;
-  MATS.forEach(m=>{STAGES.forEach(s=>{SLOTS.forEach(sl=>{
-    total++;
-    const v=dd[m]?.[s.key]?.[sl];
+  MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+    total++;const v=dd[m]?.[s.key]?.[sl];
     if(v!==''&&v!==undefined&&v!==null){filled++;const n=norms[s.key];if(n!==''&&n!==null&&Number(v)>Number(n))breaches++;}
   });});});
-  const pct=Math.round(filled/total*100);
   document.getElementById('sFilled').textContent=filled;
   document.getElementById('sTotal').textContent=' / '+total;
-  document.getElementById('sPct').textContent=pct+'% complete';
+  document.getElementById('sPct').textContent=Math.round(filled/total*100)+'% complete';
   const bEl=document.getElementById('sBreaches'),bCard=document.getElementById('breachCard');
   bEl.textContent=breaches;
-  if(breaches===0){bEl.className='snum cg';bCard.className='stat-card cg';document.getElementById('sBreachSub').textContent='All within limits ✓';}
-  else{bEl.className='snum cr';bCard.className='stat-card cr';document.getElementById('sBreachSub').textContent=breaches+' stage'+(breaches>1?'s':'')+' over norm';}
+  if(breaches===0){bEl.className='sval green';bCard.className='stat-card s-green';document.getElementById('sBreachSub').textContent='All within limits';}
+  else{bEl.className='sval red';bCard.className='stat-card s-red';document.getElementById('sBreachSub').textContent=breaches+' stage'+(breaches>1?'s':'')+' over norm';}
   document.getElementById('sSlot').textContent=SLOTS[curSlot];
-  updateStatDays();
+  document.getElementById('sDays').textContent=Object.keys(allAuditData).length;
 }
-function updateStatDays(){document.getElementById('sDays').textContent=Object.keys(allData).length;}
 
+// ══════════════════════════════════════════════════════════
+// DWM RENDER
+// ══════════════════════════════════════════════════════════
+const DWM_SECTIONS=[
+  {key:'printing',label:'Printing'},
+  {key:'inspection',label:'Inspection'},
+  {key:'assembly',label:'Assembly'},
+  {key:'packing',label:'Packing'},
+];
+
+function renderDWM(){
+  const cont=document.getElementById('dwmSections');
+  cont.innerHTML='';
+  let totalOut=0,totalTarget=0,activeCount=0,belowCount=0;
+  DWM_SECTIONS.forEach(sec=>{
+    const stList=(stations[sec.key]||[]).filter(s=>s.active);
+    if(!stList.length)return;
+    const secDiv=document.createElement('div');
+    secDiv.innerHTML='<div class="sec-hdr"><span class="sec-title">'+sec.label+'</span></div>';
+    stList.forEach((st,si)=>{
+      activeCount++;
+      const key=sec.key+'_'+si;
+      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const target=st.target||0;
+      const p=pct(total,target);
+      if(p!==null&&p<100)belowCount++;
+      totalOut+=total;if(target)totalTarget+=target;
+      const card=document.createElement('div');card.className='dwm-station';
+      let inputsHTML='';
+      for(let h=1;h<=12;h++){
+        const v=dwmData[key]?.[h]??'';
+        const hrTarget=target?Math.round(target/12):0;
+        const cls=v!==''?(Number(v)>=hrTarget?'d-ok':'d-low'):'';
+        inputsHTML+='<div class="dwm-hr"><div class="dwm-hr-lbl">HR'+h+'</div><input type="number" min="0" class="dwm-inp '+cls+'" value="'+(v??'')+'" placeholder="—" data-key="'+key+'" data-hr="'+h+'" onchange="onDWMInput(this)"/></div>';
+      }
+      const effPct=p!==null?p:null;
+      const fillW=effPct!==null?Math.min(effPct,100):0;
+      const fillCls=effClass(effPct);
+      card.innerHTML=`<div class="dwm-station-hdr">
+        <div class="dwm-station-name">${st.name}</div>
+        <div class="dwm-station-target">${target?'Target: '+target.toLocaleString()+'/shift':''}</div>
+      </div>
+      <div class="dwm-inputs">${inputsHTML}</div>
+      <div class="dwm-footer">
+        <div class="dwm-stat"><div class="dwm-stat-lbl">Total</div><div class="dwm-stat-val" id="dwm-total-${key}">${total.toLocaleString()}</div></div>
+        <div class="dwm-stat"><div class="dwm-stat-lbl">Avg/Hr</div><div class="dwm-stat-val" id="dwm-avg-${key}">${total?Math.round(total/12):0}</div></div>
+        <div class="dwm-stat"><div class="dwm-stat-lbl">Efficiency</div><div class="dwm-stat-val ${fillCls}" id="dwm-eff-${key}">${effPct!==null?effPct+'%':'—'}</div></div>
+        <div class="eff-bar"><div class="eff-fill ${fillCls}" id="dwm-bar-${key}" style="width:${fillW}%"></div></div>
+      </div>`;
+      secDiv.appendChild(card);
+    });
+    cont.appendChild(secDiv);
+  });
+  // Summary stats
+  const overallEff=totalTarget?Math.round(totalOut/totalTarget*100):null;
+  document.getElementById('dwmTotal').textContent=totalOut.toLocaleString();
+  document.getElementById('dwmEff').textContent=overallEff!==null?overallEff+'%':'—';
+  document.getElementById('dwmActive').textContent=activeCount;
+  document.getElementById('dwmBelow').textContent=belowCount;
+  const effEl=document.getElementById('dwmEff');
+  if(overallEff!==null){effEl.className='sval '+(overallEff>=90?'green':overallEff>=70?'amber':'red');}
+}
+
+function onDWMInput(inp){
+  const {key,hr}=inp.dataset;
+  if(!dwmData[key])dwmData[key]={};
+  dwmData[key][Number(hr)]=inp.value===''?'':Number(inp.value);
+  // recalc station footer
+  const secKey=key.split('_')[0];
+  const si=Number(key.split('_')[1]);
+  const st=(stations[secKey]||[])[si];
+  if(!st)return;
+  const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+  const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+  const target=st.target||0;
+  const p=pct(total,target);
+  const cls=effClass(p);
+  const fillW=p!==null?Math.min(p,100):0;
+  const tEl=document.getElementById('dwm-total-'+key);
+  const aEl=document.getElementById('dwm-avg-'+key);
+  const eEl=document.getElementById('dwm-eff-'+key);
+  const bEl=document.getElementById('dwm-bar-'+key);
+  if(tEl)tEl.textContent=total.toLocaleString();
+  if(aEl)aEl.textContent=total?Math.round(total/12):0;
+  if(eEl){eEl.textContent=p!==null?p+'%':'—';eEl.className='dwm-stat-val '+cls;}
+  if(bEl){bEl.style.width=fillW+'%';bEl.className='eff-fill '+cls;}
+  // update input color
+  const hrTarget=target?Math.round(target/12):0;
+  inp.className='dwm-inp '+(inp.value!==''?(Number(inp.value)>=hrTarget?'d-ok':'d-low'):'');
+  setSyncStatus('syncing','Unsaved');
+  clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(window._firebaseReady)saveDWM();},3000);
+  updateDWMSummary();
+}
+
+function updateDWMSummary(){
+  let totalOut=0,totalTarget=0,activeCount=0,belowCount=0;
+  DWM_SECTIONS.forEach(sec=>{
+    const stList=(stations[sec.key]||[]).filter(s=>s.active);
+    stList.forEach((st,si)=>{
+      activeCount++;
+      const key=sec.key+'_'+si;
+      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const target=st.target||0;
+      const p=pct(total,target);
+      if(p!==null&&p<100)belowCount++;
+      totalOut+=total;if(target)totalTarget+=target;
+    });
+  });
+  const overallEff=totalTarget?Math.round(totalOut/totalTarget*100):null;
+  document.getElementById('dwmTotal').textContent=totalOut.toLocaleString();
+  document.getElementById('dwmEff').textContent=overallEff!==null?overallEff+'%':'—';
+  document.getElementById('dwmActive').textContent=activeCount;
+  document.getElementById('dwmBelow').textContent=belowCount;
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+function refreshDash(){
+  buildGauges();buildInspectorCards();buildTrend();
+}
+
+function buildGauges(){
+  const cont=document.getElementById('dashGauges');cont.innerHTML='';
+  DWM_SECTIONS.forEach(sec=>{
+    const stList=(stations[sec.key]||[]).filter(s=>s.active&&s.target>0);
+    if(!stList.length)return;
+    let totalOut=0,totalTarget=0;
+    stList.forEach((st,si)=>{
+      const key=sec.key+'_'+si;
+      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+      totalOut+=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      totalTarget+=st.target;
+    });
+    const p=pct(totalOut,totalTarget);
+    const cls=effClass(p);
+    const fillW=p!==null?Math.min(p,100):0;
+    const card=document.createElement('div');card.className='dash-card';
+    card.innerHTML=`<div class="dash-card-title">${sec.label} Section</div>
+    <div class="gauge-wrap">
+      <div class="gauge-val">${p!==null?p+'%':'—'}</div>
+      <div class="gauge-bar"><div class="gauge-fill ${cls}" style="width:${fillW}%"></div></div>
+      <div style="display:flex;justify-content:space-between;width:100%;margin-top:4px">
+        <span class="gauge-label">Output: ${totalOut.toLocaleString()}</span>
+        <span class="gauge-label">Target: ${totalTarget.toLocaleString()}</span>
+      </div>
+    </div>`;
+    cont.appendChild(card);
+  });
+  if(!cont.children.length){
+    cont.innerHTML='<div class="dash-card" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--ink4)">Enter DWM data to see efficiency gauges</div>';
+  }
+}
+
+function buildInspectorCards(){
+  const cont=document.getElementById('inspectorCards');cont.innerHTML='';
+  const inspList=(stations.inspection||[]).filter(s=>s.active);
+  if(!inspList.length){cont.innerHTML='<div style="color:var(--ink4);font-size:13px;grid-column:1/-1">Configure inspection stations to see performance cards</div>';return;}
+  inspList.forEach((st,si)=>{
+    const key='inspection_'+si;
+    const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+    const todayTotal=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+    const p=pct(todayTotal,st.target);
+    const cls=effClass(p);
+    const card=document.createElement('div');card.className='inspector-card';
+    card.innerHTML=`<div class="insp-name">${st.name}</div>
+    <div class="insp-type">${st.type||'Inspector'} — Target: ${st.target}/shift</div>
+    <div class="insp-stat"><span class="insp-stat-lbl">Today Output</span><span class="insp-stat-val">${todayTotal.toLocaleString()}</span></div>
+    <div class="insp-stat"><span class="insp-stat-lbl">Today Efficiency</span><span class="insp-stat-val ${cls}">${p!==null?p+'%':'—'}</span></div>
+    <div class="insp-stat"><span class="insp-stat-lbl">Avg/Hr</span><span class="insp-stat-val">${todayTotal?Math.round(todayTotal/12):0}</span></div>`;
+    cont.appendChild(card);
+  });
+}
+
+function buildTrend(){
+  const cont=document.getElementById('trendChart');
+  const dates=Object.keys(allAuditData).sort().slice(-7);
+  if(dates.length<2){cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Fill audit data for at least 2 days to see trends</div>';return;}
+  let html='<div style="overflow-x:auto"><table style="width:100%;min-width:400px;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border)">Date</th><th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">Breaches</th><th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">Status</th></tr></thead><tbody>';
+  dates.forEach(d=>{
+    const dd=allAuditData[d]||{};
+    let br=0;
+    MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+      const v=dd[m]?.[s.key]?.[sl];const n=norms[s.key];
+      if(v!==''&&v!==undefined&&v!==null&&n!==''&&n!==null&&Number(v)>Number(n))br++;
+    });});});
+    const status=br===0?'<span style="color:var(--green);font-weight:600">Clean</span>':'<span style="color:var(--accent);font-weight:600">'+br+' breach'+(br>1?'es':'')+'</span>';
+    html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 10px;font-size:12px;font-family:var(--mono)">'+fmtDate(d)+'</td><td style="text-align:center;padding:8px 10px;font-family:var(--mono);font-size:13px">'+br+'</td><td style="text-align:center;padding:8px 10px;font-size:12px">'+status+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  cont.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════════════════════
+function genWA(){
+  const dd=allAuditData[today]||{};
+  let breaches=[];
+  MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+    const v=dd[m]?.[s.key]?.[sl];const n=norms[s.key];
+    if(v!==''&&v!==undefined&&v!==null&&n!==''&&n!==null&&Number(v)>Number(n)){
+      breaches.push(m+' – '+s.label+' ('+sl+'): '+v+' trolleys [Norm: <'+n+']');
+    }
+  });});});
+  let totalOut=0;
+  DWM_SECTIONS.forEach(sec=>{
+    (stations[sec.key]||[]).filter(s=>s.active).forEach((st,si)=>{
+      const key=sec.key+'_'+si;
+      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+      totalOut+=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+    });
+  });
+  const msg=`*MRP AutoRub – Daily Production Summary*
+*Date:* ${fmtDate(today)}
+
+*AUDIT STATUS*
+${breaches.length===0?'All stages within norm — no breaches recorded.':breaches.map(b=>'- '+b).join('\n')}
+
+*PRODUCTION OUTPUT*
+Total units produced today: ${totalOut.toLocaleString()}
+
+*NORM BREACHES: ${breaches.length}*
+${breaches.length===0?'NIL':breaches.length+' breach'+(breaches.length>1?'es':'')+' recorded'}
+
+_Report generated via MRP AutoRub Production Intelligence_`;
+  document.getElementById('waPreview').textContent=msg;
+}
+
+function copyWA(){
+  const txt=document.getElementById('waPreview').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('Message copied — paste in WhatsApp','success')).catch(()=>toast('Copy failed — select text manually','error'));
+}
+
+function buildHeatmap(){
+  const grid=document.getElementById('heatmapGrid');grid.innerHTML='';
+  const now=new Date();
+  for(let i=29;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    const dd=allAuditData[key];
+    const day=d.getDate();
+    let cls='hmap-none',title='No data';
+    if(dd){
+      let br=0;
+      MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+        const v=dd[m]?.[s.key]?.[sl];const n=norms[s.key];
+        if(v!==''&&v!==undefined&&v!==null&&n!==''&&n!==null&&Number(v)>Number(n))br++;
+      });});});
+      cls=br===0?'hmap-good':br<=3?'hmap-mid':'hmap-bad';
+      title=fmtDate(key)+': '+br+' breach'+(br!==1?'es':'');
+    }
+    const el=document.createElement('div');
+    el.className='hmap-day '+cls;
+    el.textContent=day;el.title=title;
+    grid.appendChild(el);
+  }
+}
+
+// ── Excel style helpers ──────────────────────────────────
+function xCell(v,opts={}){
+  const o={v,t:typeof v==='number'?'n':'s',...opts};
+  const s={font:{name:'Arial',sz:opts.sz||10,bold:!!opts.bold,color:{rgb:opts.fc||'000000'}},
+    alignment:{horizontal:opts.al||'left',vertical:'center',wrapText:!!opts.wrap},
+    fill:opts.bg?{patternType:'solid',fgColor:{rgb:opts.bg}}:{patternType:'none'},
+    border:opts.border?{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}:{}
+  };
+  if(opts.border2){s.border={top:{style:'medium',color:{rgb:'1A1714'}},bottom:{style:'medium',color:{rgb:'1A1714'}},left:{style:'medium',color:{rgb:'1A1714'}},right:{style:'medium',color:{rgb:'1A1714'}}}}
+  return {...o,s};
+}
+function colLetter(n){let s='';while(n>0){s=String.fromCharCode(65+(n-1)%26)+s;n=Math.floor((n-1)/26);}return s;}
+function setCells(ws,startRow,startCol,data){
+  data.forEach((row,ri)=>{
+    row.forEach((cell,ci)=>{
+      if(cell===null||cell===undefined)return;
+      const addr=colLetter(startCol+ci)+(startRow+ri);
+      ws[addr]=typeof cell==='object'?cell:{v:cell,t:typeof cell==='number'?'n':'s'};
+    });
+  });
+}
+function setMerge(ws,r1,c1,r2,c2){
+  if(!ws['!merges'])ws['!merges']=[];
+  ws['!merges'].push({s:{r:r1-1,c:c1-1},e:{r:r2-1,c:c2-1}});
+}
+function setRange(ws,maxR,maxC){ws['!ref']=`A1:${colLetter(maxC)}${maxR}`;}
+
+async function exportExcel(){
+  toast('Building report — please wait...','info');
+  await loadAllHistory();
+  if(typeof XLSX==='undefined'){toast('Export library not loaded','error');return;}
+  const wb=XLSX.utils.book_new();
+  const dates=Object.keys(allAuditData).sort();
+  const genTime=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  // ════════════════════════════════════════
+  // SHEET 1 — COVER PAGE
+  // ════════════════════════════════════════
+  const cvs={};
+  cvs['A1']=xCell('MRP AUTORUB PVT LTD',{bold:true,sz:18,fc:'FFFFFF',bg:'1A1714',al:'center'});
+  cvs['A2']=xCell('Production Intelligence Report',{bold:true,sz:13,fc:'FFFFFF',bg:'1A1714',al:'center'});
+  cvs['A3']=xCell('',{bg:'C41E3A'});
+  cvs['A4']=xCell('Report Period',{bold:true,sz:10,fc:'6B6660',bg:'F7F6F3'});
+  cvs['B4']=xCell(dates.length?fmtDate(dates[0])+' — '+fmtDate(dates[dates.length-1]):'No data',{sz:10,bg:'F7F6F3'});
+  cvs['A5']=xCell('Generated On',{bold:true,sz:10,fc:'6B6660',bg:'F7F6F3'});
+  cvs['B5']=xCell(genTime,{sz:10,bg:'F7F6F3'});
+  cvs['A6']=xCell('Total Audit Days',{bold:true,sz:10,fc:'6B6660',bg:'F7F6F3'});
+  cvs['B6']=xCell(dates.length,{t:'n',sz:10,bg:'F7F6F3'});
+  cvs['A7']=xCell('Prepared By',{bold:true,sz:10,fc:'6B6660',bg:'F7F6F3'});
+  cvs['B7']=xCell('MRP AutoRub Production Intelligence System',{sz:10,bg:'F7F6F3'});
+  cvs['A8']=xCell('');
+  cvs['A9']=xCell('CONTENTS',{bold:true,sz:10,fc:'FFFFFF',bg:'3D3A36',al:'center'});
+  cvs['A10']=xCell('1. Audit Summary',{sz:10,bg:'F0EEE9'});
+  cvs['A11']=xCell('2. Daily Audit Detail (per date)',{sz:10,bg:'F0EEE9'});
+  cvs['A12']=xCell('3. DWM Production Report',{sz:10,bg:'F0EEE9'});
+  cvs['A13']=xCell('4. Inspector Performance',{sz:10,bg:'F0EEE9'});
+  cvs['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}},{s:{r:2,c:0},e:{r:2,c:5}},
+    {s:{r:8,c:0},e:{r:8,c:5}},
+  ];
+  cvs['!cols']=[{wch:22},{wch:38},{wch:12},{wch:12},{wch:12},{wch:12}];
+  cvs['!rows']=[{hpt:36},{hpt:24},{hpt:6},{hpt:20},{hpt:20},{hpt:20},{hpt:20},{hpt:12},{hpt:22},{hpt:20},{hpt:20},{hpt:20},{hpt:20}];
+  setRange(cvs,14,6);
+  XLSX.utils.book_append_sheet(wb,cvs,'Cover');
+
+  // ════════════════════════════════════════
+  // SHEET 2 — AUDIT SUMMARY
+  // ════════════════════════════════════════
+  const as={};
+  // Header band
+  for(let c=1;c<=9;c++) as[colLetter(c)+'1']=xCell(c===1?'MRP AUTORUB — DAILY AUDIT SUMMARY':'',{bold:true,sz:12,fc:'FFFFFF',bg:'1A1714',al:c===1?'left':'center'});
+  for(let c=1;c<=9;c++) as[colLetter(c)+'2']=xCell(c===1?'Report Period: '+(dates.length?fmtDate(dates[0])+' to '+fmtDate(dates[dates.length-1]):'No data'):'',{sz:9,fc:'9C9690',bg:'2A2724'});
+  // Column headers row 4
+  const aHdrs=['Date','Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM','Breaches','Status'];
+  aHdrs.forEach((h,i)=>{
+    as[colLetter(i+1)+'4']=xCell(h,{bold:true,sz:9,fc:'FFFFFF',bg:'3D3A36',al:'center',border:true});
+  });
+  let aRow=5;
+  dates.forEach(date=>{
+    const dd=allAuditData[date]||{};
+    MATS.forEach((mat,mi)=>{
+      AUDIT_STAGES.forEach((st,si)=>{
+        const n=norms[st.key];
+        const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return(v!==''&&v!==undefined&&v!==null)?Number(v):'';});
+        const br=vals.filter(v=>v!==''&&n!==''&&n!==null&&Number(v)>Number(n)).length;
+        const isBreach=br>0;
+        const bg=aRow%2===0?'FFFFFF':'F7F6F3';
+        const brBg=isBreach?'FDF0F2':bg;
+        as[colLetter(1)+aRow]=xCell(mi===0&&si===0?fmtDate(date):'',{sz:9,bg:mi===0&&si===0?bg:'F7F6F3',border:true});
+        as[colLetter(2)+aRow]=xCell(si===0?mat:'',{sz:9,bold:si===0,fc:mat==='EPDM'?'1A3D6B':'1A6B3C',bg:si===0?bg:'F7F6F3',border:true});
+        as[colLetter(3)+aRow]=xCell(st.label,{sz:9,bg:brBg,border:true});
+        as[colLetter(4)+aRow]=xCell(n!==''&&n!==null?'< '+n:'—',{sz:9,al:'center',bg:brBg,border:true});
+        vals.forEach((v,vi)=>{
+          const isCellBreach=v!==''&&n!==''&&n!==null&&Number(v)>Number(n);
+          as[colLetter(5+vi)+aRow]=xCell(v===''?'—':v,{sz:9,t:v===''?'s':'n',al:'center',
+            bg:isCellBreach?'FDF0F2':v!==''?'EDF7F2':brBg,
+            fc:isCellBreach?'C41E3A':v!==''?'1A6B3C':'000000',
+            bold:isCellBreach,border:true});
+        });
+        as[colLetter(8)+aRow]=xCell(br||0,{sz:9,t:'n',al:'center',bg:isBreach?'FDF0F2':bg,fc:isBreach?'C41E3A':'1A6B3C',bold:isBreach,border:true});
+        as[colLetter(9)+aRow]=xCell(n===''||n===null?'—':isBreach?'BREACH':'OK',{sz:9,al:'center',
+          bg:isBreach?'C41E3A':n===''||n===null?'F0EEE9':'1A6B3C',
+          fc:'FFFFFF',bold:true,border:true});
+        aRow++;
+      });
+    });
+    // Spacer row between dates
+    for(let c=1;c<=9;c++) as[colLetter(c)+aRow]=xCell('',{bg:'F0EEE9'});
+    aRow++;
+  });
+  // Totals row
+  let totalBr=0;
+  dates.forEach(date=>{const dd=allAuditData[date]||{};MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{const v=dd[m]?.[s.key]?.[sl];const n=norms[s.key];if(v!==''&&v!==undefined&&v!==null&&n!==''&&n!==null&&Number(v)>Number(n))totalBr++;});});});});
+  as[colLetter(1)+aRow]=xCell('TOTAL BREACHES ACROSS ALL DATES',{bold:true,sz:9,fc:'FFFFFF',bg:'1A1714'});
+  for(let c=2;c<=7;c++) as[colLetter(c)+aRow]=xCell('',{bg:'1A1714'});
+  as[colLetter(8)+aRow]=xCell(totalBr,{bold:true,sz:11,t:'n',al:'center',bg:'C41E3A',fc:'FFFFFF'});
+  as[colLetter(9)+aRow]=xCell(totalBr===0?'CLEAN':'REVIEW',{bold:true,sz:9,al:'center',bg:totalBr===0?'1A6B3C':'C41E3A',fc:'FFFFFF'});
+  as['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}},{s:{r:aRow-1,c:0},e:{r:aRow-1,c:6}}];
+  as['!cols']=[{wch:14},{wch:10},{wch:28},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
+  setRange(as,aRow,9);
+  XLSX.utils.book_append_sheet(wb,as,'Audit Summary');
+
+  // ════════════════════════════════════════
+  // SHEET 3 — DAILY DETAIL (each date)
+  // ════════════════════════════════════════
+  dates.forEach(date=>{
+    const dd=allAuditData[date]||{};
+    const ws={};
+    // Title
+    for(let c=1;c<=7;c++) ws[colLetter(c)+'1']=xCell(c===1?'MRP AUTORUB — DAILY AUDIT DETAIL':'',{bold:true,sz:12,fc:'FFFFFF',bg:'1A1714'});
+    for(let c=1;c<=7;c++) ws[colLetter(c)+'2']=xCell(c===1?fmtDate(date):'',{sz:10,fc:'9C9690',bg:'2A2724'});
+    ws['A3']=xCell('');
+    // Headers
+    const hdrs=['Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM','Result'];
+    hdrs.forEach((h,i)=>ws[colLetter(i+1)+'4']=xCell(h,{bold:true,sz:9,fc:'FFFFFF',bg:'3D3A36',al:'center',border:true}));
+    let r=5;
+    MATS.forEach(mat=>{
+      // Mat header row
+      for(let c=1;c<=7;c++) ws[colLetter(c)+r]=xCell(c===1?mat:'',{bold:true,sz:10,fc:'FFFFFF',bg:mat==='EPDM'?'1A3D6B':'1A6B3C'});
+      r++;
+      AUDIT_STAGES.forEach(st=>{
+        const n=norms[st.key];
+        const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return(v!==''&&v!==undefined&&v!==null)?Number(v):'';});
+        const br=vals.filter(v=>v!==''&&n!==''&&n!==null&&Number(v)>Number(n)).length;
+        const bg=r%2===0?'FFFFFF':'F7F6F3';
+        ws['A'+r]=xCell(mat,{sz:9,fc:mat==='EPDM'?'1A3D6B':'1A6B3C',bg,border:true});
+        ws['B'+r]=xCell(st.label,{sz:9,bg,border:true});
+        ws['C'+r]=xCell(n!==''&&n!==null?'< '+n:'—',{sz:9,al:'center',bg,border:true});
+        vals.forEach((v,vi)=>{
+          const isCB=v!==''&&n!==''&&n!==null&&Number(v)>Number(n);
+          ws[colLetter(4+vi)+r]=xCell(v===''?'—':v,{sz:10,t:v===''?'s':'n',al:'center',bold:isCB,
+            bg:isCB?'FDF0F2':v!==''?'EDF7F2':bg,fc:isCB?'C41E3A':v!==''?'1A6B3C':'000000',border:true});
+        });
+        ws['G'+r]=xCell(br===0?'OK':'BREACH',{sz:9,bold:true,al:'center',
+          bg:n===''||n===null?'F0EEE9':br===0?'1A6B3C':'C41E3A',fc:'FFFFFF',border:true});
+        r++;
+      });
+      // Spacer
+      for(let c=1;c<=7;c++) ws[colLetter(c)+r]=xCell('',{bg:'F0EEE9'});
+      r++;
+    });
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+    ws['!cols']=[{wch:12},{wch:28},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
+    setRange(ws,r,7);
+    const sheetName=date.replace(/-/g,'.');
+    XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  });
+
+  // ════════════════════════════════════════
+  // SHEET 4 — DWM PRODUCTION REPORT
+  // ════════════════════════════════════════
+  const dws={};
+  for(let c=1;c<=8;c++) dws[colLetter(c)+'1']=xCell(c===1?'MRP AUTORUB — DWM PRODUCTION REPORT':'',{bold:true,sz:12,fc:'FFFFFF',bg:'1A1714'});
+  for(let c=1;c<=8;c++) dws[colLetter(c)+'2']=xCell(c===1?'Date: '+fmtDate(today)+'   |   Generated: '+genTime:'',{sz:9,fc:'9C9690',bg:'2A2724'});
+  const dHdrs=['Section','Station','Target/Shift','Hr 1','Hr 2','Hr 3','Hr 4','Hr 5','Hr 6','Hr 7','Hr 8','Hr 9','Hr 10','Hr 11','Hr 12','Total','Avg/Hr','Efficiency'];
+  dHdrs.forEach((h,i)=>dws[colLetter(i+1)+'4']=xCell(h,{bold:true,sz:9,fc:'FFFFFF',bg:'3D3A36',al:'center',border:true}));
+  let dr=5;
+  DWM_SECTIONS.forEach(sec=>{
+    const stList=(stations[sec.key]||[]).filter(s=>s.active);
+    if(!stList.length)return;
+    // Section header
+    for(let c=1;c<=18;c++) dws[colLetter(c)+dr]=xCell(c===1?sec.label.toUpperCase():'',{bold:true,sz:10,fc:'FFFFFF',bg:'3D3A36'});
+    dr++;
+    stList.forEach((st,si)=>{
+      const key=sec.key+'_'+si;
+      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const target=st.target||0;
+      const p=target?Math.round(total/target*100):null;
+      const bg=dr%2===0?'FFFFFF':'F7F6F3';
+      const effBg=p===null?bg:p>=90?'EDF7F2':p>=70?'FEF3E8':'FDF0F2';
+      const effFc=p===null?'000000':p>=90?'1A6B3C':p>=70?'B85C00':'C41E3A';
+      dws['A'+dr]=xCell(sec.label,{sz:9,bg,border:true});
+      dws['B'+dr]=xCell(st.name,{sz:9,bold:true,bg,border:true});
+      dws['C'+dr]=xCell(target||'—',{sz:9,t:target?'n':'s',al:'center',bg,border:true});
+      hrs.forEach((v,hi)=>{
+        const hrTarget=target?Math.round(target/12):0;
+        const isBad=v!==''&&hrTarget&&Number(v)<hrTarget*0.8;
+        dws[colLetter(4+hi)+dr]=xCell(v===''?'—':Number(v),{sz:9,t:v===''?'s':'n',al:'center',
+          bg:isBad?'FDF0F2':v!==''?bg:bg,fc:isBad?'C41E3A':'000000',border:true});
+      });
+      dws['P'+dr]=xCell(total,{sz:10,t:'n',bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+      dws['Q'+dr]=xCell(total?Math.round(total/12):0,{sz:9,t:'n',al:'center',bg,border:true});
+      dws['R'+dr]=xCell(p!==null?p+'%':'—',{sz:10,bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+      dr++;
+    });
+    // Section subtotal
+    for(let c=1;c<=18;c++) dws[colLetter(c)+dr]=xCell(c===1?sec.label+' Sub-Total':'',{bold:true,sz:9,bg:'F0EEE9',border:true});
+    dr++;
+  });
+  dws['!merges']=[{s:{r:0,c:0},e:{r:0,c:17}},{s:{r:1,c:0},e:{r:1,c:17}}];
+  dws['!cols']=[{wch:12},{wch:22},{wch:12},...Array(12).fill({wch:7}),{wch:9},{wch:8},{wch:11}];
+  setRange(dws,dr,18);
+  XLSX.utils.book_append_sheet(wb,dws,'DWM Production');
+
+  // ════════════════════════════════════════
+  // SHEET 5 — INSPECTOR PERFORMANCE
+  // ════════════════════════════════════════
+  const iws={};
+  for(let c=1;c<=6;c++) iws[colLetter(c)+'1']=xCell(c===1?'MRP AUTORUB — INSPECTOR PERFORMANCE DASHBOARD':'',{bold:true,sz:12,fc:'FFFFFF',bg:'1A1714'});
+  for(let c=1;c<=6;c++) iws[colLetter(c)+'2']=xCell(c===1?'Date: '+fmtDate(today):'',{sz:9,fc:'9C9690',bg:'2A2724'});
+  const iHdrs=['Inspector Name','Type','Target/Shift','Today Output','Today Efficiency','Rating'];
+  iHdrs.forEach((h,i)=>iws[colLetter(i+1)+'4']=xCell(h,{bold:true,sz:9,fc:'FFFFFF',bg:'3D3A36',al:'center',border:true}));
+  let ir=5;
+  const inspList=(stations.inspection||[]).filter(s=>s.active);
+  inspList.forEach((st,si)=>{
+    const key='inspection_'+si;
+    const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
+    const todayTotal=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+    const p=pct(todayTotal,st.target);
+    const bg=ir%2===0?'FFFFFF':'F7F6F3';
+    const effBg=p===null?bg:p>=90?'EDF7F2':p>=70?'FEF3E8':'FDF0F2';
+    const effFc=p===null?'000000':p>=90?'1A6B3C':p>=70?'B85C00':'C41E3A';
+    const rating=p===null?'—':p>=90?'Excellent':p>=75?'Good':p>=60?'Average':'Needs Attention';
+    iws['A'+ir]=xCell(st.name,{sz:10,bold:true,bg,border:true});
+    iws['B'+ir]=xCell(st.type||'Inspector',{sz:9,fc:st.type==='EPDM'?'1A3D6B':'1A6B3C',bg,border:true});
+    iws['C'+ir]=xCell(st.target||0,{sz:9,t:'n',al:'center',bg,border:true});
+    iws['D'+ir]=xCell(todayTotal,{sz:10,bold:true,t:'n',al:'center',bg:effBg,fc:effFc,border:true});
+    iws['E'+ir]=xCell(p!==null?p+'%':'—',{sz:10,bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+    iws['F'+ir]=xCell(rating,{sz:9,bold:true,al:'center',
+      bg:p===null?bg:p>=90?'1A6B3C':p>=75?'B8860B':p>=60?'B85C00':'C41E3A',
+      fc:'FFFFFF',border:true});
+    ir++;
+  });
+  if(!inspList.length){iws['A5']=xCell('No inspectors configured. Use Configure Stations in the app.',{sz:10,fc:'9C9690'});}
+  iws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  iws['!cols']=[{wch:22},{wch:12},{wch:14},{wch:14},{wch:16},{wch:16}];
+  setRange(iws,ir,6);
+  XLSX.utils.book_append_sheet(wb,iws,'Inspector Performance');
+
+  XLSX.writeFile(wb,'MRP_AutoRub_Report_'+today+'.xlsx');
+  toast('Full report downloaded successfully','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// NORMS MODAL
+// ══════════════════════════════════════════════════════════
 function openNorms(){
   const f=document.getElementById('normsForm');f.innerHTML='';
-  STAGES.forEach(s=>{
-    const r=document.createElement('div');r.className='nrow';
-    r.innerHTML='<span class="nrlbl">'+s.label+'</span><div class="nrgrp"><span class="nlt">&lt;</span><input class="ninp" type="number" min="0" id="ni_'+s.key+'" value="'+(norms[s.key]??'')+'" placeholder="–"/></div>';
+  AUDIT_STAGES.forEach(s=>{
+    const r=document.createElement('div');r.className='form-row';
+    r.innerHTML='<div><div class="form-lbl">'+s.label+'</div></div><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--amber);font-family:var(--mono);font-weight:600">&lt;</span><input class="finp" type="number" min="0" id="ni_'+s.key+'" value="'+(norms[s.key]??'')+'" placeholder="—" style="width:80px;text-align:center"/></div>';
     f.appendChild(r);
   });
   document.getElementById('normsOv').classList.add('open');
 }
 async function saveNorms(){
-  STAGES.forEach(s=>{const v=document.getElementById('ni_'+s.key).value;norms[s.key]=v===''?'':Number(v);});
+  AUDIT_STAGES.forEach(s=>{const v=document.getElementById('ni_'+s.key).value;norms[s.key]=v===''?'':Number(v);});
   lsSet(NK,norms);
   try{await window._setDoc(window._doc(window._db,'config','norms'),norms);}catch{}
-  document.getElementById('normsOv').classList.remove('open');
-  renderAll();toast('✓ Norms saved and synced to all devices','success');
+  closeModal('normsOv');renderAudit();toast('Norms updated and synced','success');
 }
-function closeNorms(e){if(!e||e.target===document.getElementById('normsOv'))document.getElementById('normsOv').classList.remove('open');}
 
+// ══════════════════════════════════════════════════════════
+// STATION CONFIG MODAL
+// ══════════════════════════════════════════════════════════
+function openStationConfig(){
+  const f=document.getElementById('stationForm');f.innerHTML='';
+  DWM_SECTIONS.forEach(sec=>{
+    const secDiv=document.createElement('div');
+    secDiv.innerHTML='<div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin:16px 0 8px;padding-top:8px;border-top:1px solid var(--border)">'+sec.label+' Stations</div>';
+    const list=document.createElement('div');list.className='station-list';list.id='slist-'+sec.key;
+    (stations[sec.key]||[]).forEach((st,i)=>{
+      list.appendChild(makeStationItem(sec.key,i,st));
+    });
+    secDiv.appendChild(list);
+    const addBtn=document.createElement('button');addBtn.className='add-station-btn';addBtn.textContent='+ Add Station';
+    addBtn.onclick=()=>{
+      const arr=stations[sec.key]||[];
+      arr.push({name:sec.label+' '+(arr.length+1),target:0,active:true});
+      stations[sec.key]=arr;
+      list.appendChild(makeStationItem(sec.key,arr.length-1,arr[arr.length-1]));
+    };
+    secDiv.appendChild(addBtn);
+    f.appendChild(secDiv);
+    // Inspector name field
+    if(sec.key==='inspection'){
+      const note=document.createElement('div');
+      note.style.cssText='font-size:11px;color:var(--ink4);margin-top:6px;line-height:1.5';
+      note.textContent='Inspector names are used in the performance dashboard.';
+      secDiv.appendChild(note);
+    }
+  });
+}
+
+function makeStationItem(secKey,idx,st){
+  const div=document.createElement('div');div.className='station-item';div.id='si-'+secKey+'-'+idx;
+  const activeChk=document.createElement('input');activeChk.type='checkbox';activeChk.checked=st.active;activeChk.title='Active';
+  activeChk.style.cssText='width:16px;height:16px;cursor:pointer;accent-color:var(--ink);flex-shrink:0';
+  activeChk.onchange=()=>{stations[secKey][idx].active=activeChk.checked;};
+  const nameInp=document.createElement('input');nameInp.type='text';nameInp.value=st.name;nameInp.placeholder='Station name';
+  nameInp.oninput=()=>{stations[secKey][idx].name=nameInp.value;};
+  const targetInp=document.createElement('input');targetInp.type='number';targetInp.min='0';targetInp.value=st.target||'';targetInp.placeholder='Target';
+  targetInp.oninput=()=>{stations[secKey][idx].target=Number(targetInp.value)||0;};
+  div.appendChild(activeChk);div.appendChild(nameInp);div.appendChild(targetInp);
+  return div;
+}
+
+async function saveStations(){
+  lsSet(SK,stations);
+  try{await window._setDoc(window._doc(window._db,'config','stations'),stations);}catch{}
+  closeModal('stationOv');renderDWM();toast('Station configuration saved','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════════════════
 let histSel='';
 async function openHistory(){
-  toast('Loading history from cloud…','info');
+  toast('Loading history...','info');
   await loadAllHistory();
-  const dates=Object.keys(allData).sort().reverse();
+  const dates=Object.keys(allAuditData).sort().reverse();
   histSel=dates[0]||'';
   const c=document.getElementById('histContent');
-  if(!dates.length){c.innerHTML='<div class="nohist">📭 No records yet.<br><span style="font-size:12px;color:var(--muted2)">Fill and sync your first audit to see history.</span></div>';}
+  if(!dates.length){c.innerHTML='<div class="nohist">No records yet. Fill and sync your first audit.</div>';}
   else{
     let html='<div class="dscroll">';
     dates.forEach(d=>{html+='<button class="dbtn'+(d===histSel?' active':'')+'" onclick="selHistDate(\''+d+'\')">'+fmtDate(d)+'</button>';});
@@ -484,20 +1425,20 @@ function selHistDate(d){
   renderHistDay();
 }
 function renderHistDay(){
-  const dd=allData[histSel]||{};
-  let html='<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px">'+fmtLong(histSel)+'</div>';
+  const dd=allAuditData[histSel]||{};
+  let html='<div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:14px">'+fmtLong(histSel)+'</div>';
   MATS.forEach(mat=>{
-    html+='<div class="hmat"><div class="hmathd">'+mat+'</div><table class="htbl"><thead><tr><th>Stage</th><th>Norm</th>';
+    html+='<div class="hist-mat"><div class="hmathd">'+mat+'</div><table class="htbl"><thead><tr><th style="text-align:left">Stage</th><th>Norm</th>';
     SLOTS.forEach(s=>{html+='<th>'+s+'</th>';});
     html+='</tr></thead><tbody>';
-    STAGES.forEach(st=>{
+    AUDIT_STAGES.forEach(st=>{
       const n=norms[st.key];
-      html+='<tr><td>'+st.label+'</td><td>'+(n!==''&&n!==null?'<'+n:'–')+'</td>';
+      html+='<tr><td>'+st.label+'</td><td style="text-align:center">'+(n!==''&&n!==null?'<'+n:'—')+'</td>';
       SLOTS.forEach(sl=>{
         const v=dd[mat]?.[st.key]?.[sl];
         const ok=v!==''&&v!==undefined&&v!==null;
         const br=ok&&n!==''&&Number(v)>Number(n);
-        html+='<td class="'+(br?'hbr':ok?'hok':'hemp')+'">'+(ok?v+(br?' ⚠':''):'–')+'</td>';
+        html+='<td class="'+(br?'hbr':ok?'hok':'hemp')+'">'+(ok?v+(br?' !':''):'—')+'</td>';
       });
       html+='</tr>';
     });
@@ -505,44 +1446,14 @@ function renderHistDay(){
   });
   document.getElementById('histDay').innerHTML=html;
 }
-function closeHistory(e){if(!e||e.target===document.getElementById('histOv'))document.getElementById('histOv').classList.remove('open');}
 
-async function exportExcel(){
-  toast('Loading all data…','info');
-  await loadAllHistory();
-  if(typeof XLSX==='undefined'){toast('XLSX not loaded','error');return;}
-  const wb=XLSX.utils.book_new();
-  const rows=[['MRP AutoRub Pvt Ltd – Daily Production Audit Report'],['Generated:',new Date().toLocaleString('en-IN')],[],['Date','Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM','Breaches','Status']];
-  Object.keys(allData).sort().forEach(date=>{
-    const dd=allData[date]||{};
-    MATS.forEach(mat=>{STAGES.forEach(st=>{
-      const n=norms[st.key];
-      const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return v!==''&&v!==undefined&&v!==null?Number(v):'';});
-      const br=vals.filter(v=>v!==''&&n!==''&&n!==null&&Number(v)>Number(n)).length;
-      rows.push([fmtDate(date),mat,st.label,n!==''&&n!==null?'<'+n:'–',...vals,br||'',n===''||n===null?'–':br===0?'OK':'BREACH']);
-    });});
-  });
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[16,10,28,8,10,10,10,10,10].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb,ws,'Audit Summary');
-  Object.keys(allData).sort().forEach(date=>{
-    const dd=allData[date]||{};
-    const r=[[`MRP AutoRub – Audit: ${fmtDate(date)}`],[],['Material','Stage','Norm','9:30 AM','1:00 PM','4:00 PM']];
-    MATS.forEach(mat=>{
-      STAGES.forEach(st=>{
-        const n=norms[st.key];
-        const vals=SLOTS.map(sl=>{const v=dd[mat]?.[st.key]?.[sl];return v!==''&&v!==undefined&&v!==null?Number(v):'';});
-        r.push([mat,st.label,n!==''&&n!==null?'<'+n:'–',...vals]);
-      });r.push([]);
-    });
-    const ws2=XLSX.utils.aoa_to_sheet(r);
-    ws2['!cols']=[12,28,8,10,10,10].map(w=>({wch:w}));
-    XLSX.utils.book_append_sheet(wb,ws2,date.replace(/-/g,'.').slice(0,31));
-  });
-  XLSX.writeFile(wb,'MRP_Audit_'+today+'.xlsx');
-  toast('✓ Excel report downloaded','success');
+// ══════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════
+function closeModal(id,e){
+  if(!e||e.target===document.getElementById(id))
+    document.getElementById(id).classList.remove('open');
 }
-
 let tTimer;
 function toast(msg,type='success'){
   const t=document.getElementById('toast');
@@ -550,19 +1461,23 @@ function toast(msg,type='success'){
   clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
+// ══════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════
 function boot(){
   norms=lsGet(NK)||{...DN};
+  stations=lsGet(SK)||JSON.parse(JSON.stringify(DEFAULT_STATIONS));
   today=todayKey();curSlot=slotIdx();
-  renderAll();
+  renderAudit();renderDWM();
   waitForFirebase(()=>{
-    startRealtimeSync();
+    startSync();
     setTimeout(()=>{
       const ls=document.getElementById('loadingScreen');
       ls.classList.add('hide');
-      setTimeout(()=>ls.remove(),500);
-    },1500);
+      setTimeout(()=>ls.remove(),600);
+    },1400);
   });
-  setInterval(()=>{curSlot=slotIdx();today=todayKey();renderAll();subscribeToday();},60000);
+  setInterval(()=>{curSlot=slotIdx();today=todayKey();renderAudit();subscribeAuditToday();},60000);
 }
 boot();
 </script>
