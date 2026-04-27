@@ -866,6 +866,33 @@ function renderDWM(){
     if(!stList.length)return;
     const secDiv=document.createElement('div');
     secDiv.innerHTML='<div class="sec-hdr"><span class="sec-title">'+sec.label+'</span></div>';
+
+    // ── Overall totals for Inspection only ──
+    if(sec.key==='inspection'){
+      const silTotal = dwmData['insp_overall_silicone']??'';
+      const epdmTotal = dwmData['insp_overall_epdm']??'';
+      const overallDiv = document.createElement('div');
+      overallDiv.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;';
+      overallDiv.innerHTML=`
+        <div style="background:var(--surface);border:1.5px solid var(--green-border);border-radius:10px;padding:16px;box-shadow:var(--shadow);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:8px;">Overall Silicone Inspected</div>
+          <input type="number" min="0" id="inp-insp_overall_silicone" value="${silTotal}" placeholder="Enter total"
+            style="width:100%;border:none;border-bottom:2px solid var(--green-border);background:transparent;font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);outline:none;padding:4px 0;-moz-appearance:textfield;"
+            data-key="insp_overall_silicone" data-type="overall" oninput="onOverallInspInput(this)" onwheel="this.blur()"/>
+          <div id="warn-silicone" style="margin-top:8px;font-size:11px;font-weight:600;display:none;"></div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--blue-border);border-radius:10px;padding:16px;box-shadow:var(--shadow);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px;">Overall EPDM Inspected</div>
+          <input type="number" min="0" id="inp-insp_overall_epdm" value="${epdmTotal}" placeholder="Enter total"
+            style="width:100%;border:none;border-bottom:2px solid var(--blue-border);background:transparent;font-family:var(--mono);font-size:22px;font-weight:700;color:var(--blue);outline:none;padding:4px 0;-moz-appearance:textfield;"
+            data-key="insp_overall_epdm" data-type="overall" oninput="onOverallInspInput(this)" onwheel="this.blur()"/>
+          <div id="warn-epdm" style="margin-top:8px;font-size:11px;font-weight:600;display:none;"></div>
+        </div>`;
+      secDiv.appendChild(overallDiv);
+      // Check mismatch after render
+      requestAnimationFrame(()=>checkInspectionMismatch());
+    }
+
     // Section grid
     const grid=document.createElement('div');
     grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:8px;';
@@ -963,7 +990,65 @@ function onDWMInput(inp){
   }
   setSyncStatus('syncing','Unsaved');
   clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(window._firebaseReady)saveDWM();},3000);
+  if(key.startsWith('inspection_')) checkInspectionMismatch();
   updateDWMSummary();
+}
+
+function onOverallInspInput(inp){
+  const key = inp.dataset.key;
+  dwmData[key] = inp.value===''?'':Number(inp.value);
+  setSyncStatus('syncing','Unsaved');
+  clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(window._firebaseReady)saveDWM();},3000);
+  checkInspectionMismatch();
+}
+
+function checkInspectionMismatch(){
+  const inspList=(stations.inspection||[]).filter(s=>s.active);
+  let silSum=0, epdmSum=0;
+  inspList.forEach((st,si)=>{
+    const key='inspection_'+si;
+    const v=dwmData[key]?.['day']??'';
+    const n=v!==''?Number(v):0;
+    if((st.type||'').toLowerCase()==='silicone') silSum+=n;
+    else epdmSum+=n;
+  });
+
+  const silOverall = dwmData['insp_overall_silicone']??'';
+  const epdmOverall = dwmData['insp_overall_epdm']??'';
+
+  // Silicone warning
+  const wSil = document.getElementById('warn-silicone');
+  if(wSil){
+    if(silOverall!==''&&silSum>0&&Number(silOverall)!==silSum){
+      const diff=Math.abs(Number(silOverall)-silSum);
+      wSil.style.display='block';
+      wSil.style.color='var(--accent)';
+      wSil.innerHTML='&#9888; Individual sum ('+silSum.toLocaleString()+') vs Overall ('+Number(silOverall).toLocaleString()+') — diff: '+diff.toLocaleString();
+    } else if(silOverall!==''&&silSum>0&&Number(silOverall)===silSum){
+      wSil.style.display='block';
+      wSil.style.color='var(--green)';
+      wSil.innerHTML='&#10003; Individual counts match overall total';
+    } else {
+      wSil.style.display='none';
+    }
+  }
+
+  // EPDM warning
+  const wEpdm = document.getElementById('warn-epdm');
+  if(wEpdm){
+    if(epdmOverall!==''&&epdmSum>0&&Number(epdmOverall)!==epdmSum){
+      const diff=Math.abs(Number(epdmOverall)-epdmSum);
+      wEpdm.style.display='block';
+      wEpdm.style.color='var(--accent)';
+      wEpdm.innerHTML='&#9888; Individual sum ('+epdmSum.toLocaleString()+') vs Overall ('+Number(epdmOverall).toLocaleString()+') — diff: '+diff.toLocaleString();
+    } else if(epdmOverall!==''&&epdmSum>0&&Number(epdmOverall)===epdmSum){
+      wEpdm.style.display='block';
+      wEpdm.style.color='var(--green)';
+      wEpdm.innerHTML='&#10003; Individual counts match overall total';
+    } else {
+      wEpdm.style.display='none';
+    }
+  }
 }
 
 function updateDWMSummary(){
