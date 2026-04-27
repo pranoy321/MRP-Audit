@@ -1748,16 +1748,25 @@ async function dwmSelectDate(dateStr){
 }
 
 function dwmGoToPrevDay(){
-  const d = new Date(dwmDate+'T00:00:00');
+  const parts = dwmDate.split('-');
+  const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
   d.setDate(d.getDate()-1);
-  dwmSelectDate(d.toISOString().slice(0,10));
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  dwmSelectDate(y+'-'+m+'-'+day);
 }
 
 function dwmGoToNextDay(){
-  const d = new Date(dwmDate+'T00:00:00');
+  const parts = dwmDate.split('-');
+  const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
   d.setDate(d.getDate()+1);
-  const next = d.toISOString().slice(0,10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  const next = y+'-'+m+'-'+day;
   if(next <= todayKey()) dwmSelectDate(next);
+  else toast('Cannot enter data for future dates','error');
 }
 
 function dwmGoToToday(){
