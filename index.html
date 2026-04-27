@@ -1055,6 +1055,21 @@ function updateDWMSummary(){
   let totalOut=0,totalTarget=0,activeCount=0,belowCount=0;
   DWM_SECTIONS.forEach(sec=>{
     const stList=(stations[sec.key]||[]).filter(s=>s.active);
+    if(sec.key==='inspection'){
+      // Use overall if available
+      const silOverall=dwmData['insp_overall_silicone']??'';
+      const epdmOverall=dwmData['insp_overall_epdm']??'';
+      const hasOverall=silOverall!==''||epdmOverall!=='';
+      const inspOut=hasOverall
+        ?(silOverall!==''?Number(silOverall):0)+(epdmOverall!==''?Number(epdmOverall):0)
+        :stList.reduce((a,st,si)=>{const v=dwmData['inspection_'+si]?.['day']??'';return a+(v!==''?Number(v):0);},0);
+      const inspTarget=stList.reduce((a,st)=>a+(st.target||0),0);
+      const p=inspTarget?Math.round(inspOut/inspTarget*100):null;
+      if(p!==null&&p<100)belowCount++;
+      totalOut+=inspOut; if(inspTarget)totalTarget+=inspTarget;
+      activeCount+=stList.length;
+      return;
+    }
     stList.forEach((st,si)=>{
       activeCount++;
       const key=sec.key+'_'+si;
@@ -1100,12 +1115,30 @@ function buildGauges(){
     const stList = (stations[sec.key]||[]).filter(s=>s.active && s.target>0);
     if(!stList.length) return;
     let totalOut=0, totalTarget=0;
-    stList.forEach((st,si)=>{
-      const key=sec.key+'_'+si;
-      const dv=dwmData[key]?.['day']??'';
-      totalOut+=(dv!==''?Number(dv):0);
-      totalTarget+=st.target;
-    });
+
+    if(sec.key==='inspection'){
+      // Use overall totals if available, else fall back to inspector-wise sum
+      const silOverall = dwmData['insp_overall_silicone']??'';
+      const epdmOverall = dwmData['insp_overall_epdm']??'';
+      const hasOverall = silOverall!==''||epdmOverall!=='';
+      if(hasOverall){
+        totalOut = (silOverall!==''?Number(silOverall):0) + (epdmOverall!==''?Number(epdmOverall):0);
+      } else {
+        stList.forEach((st,si)=>{
+          const dv=dwmData['inspection_'+si]?.['day']??'';
+          totalOut+=(dv!==''?Number(dv):0);
+        });
+      }
+      stList.forEach(st=>{ totalTarget+=st.target; });
+    } else {
+      stList.forEach((st,si)=>{
+        const key=sec.key+'_'+si;
+        const dv=dwmData[key]?.['day']??'';
+        totalOut+=(dv!==''?Number(dv):0);
+        totalTarget+=st.target;
+      });
+    }
+
     const p = totalTarget ? Math.round(totalOut/totalTarget*100) : 0;
     anyData = true;
     const fillColor = p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
