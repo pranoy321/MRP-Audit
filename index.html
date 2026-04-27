@@ -473,14 +473,26 @@ td.acol{background:rgba(26,61,107,.03);}
     </div>
   </div>
 
-  <div class="dash-grid" id="dashGauges"></div>
+  <div class="sec-hdr"><span class="sec-title">Section Efficiency — Live Gauges</span></div>
+  <div id="dashGauges" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;"></div>
 
-  <div class="sec-hdr"><span class="sec-title">Inspector Performance</span></div>
+  <div class="sec-hdr"><span class="sec-title">Inspector Leaderboard</span></div>
+  <div class="tcard" style="padding:20px 24px;margin-bottom:24px;">
+    <div id="inspLeaderboard"><div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Enter DWM inspection data to see leaderboard</div></div>
+  </div>
+
+  <div class="sec-hdr"><span class="sec-title">Inspector Detail Cards</span></div>
   <div class="inspector-grid" id="inspectorCards"></div>
 
-  <div class="sec-hdr"><span class="sec-title">Bottleneck Trend — Last 7 Days</span></div>
-  <div class="tcard" style="padding:20px">
-    <div id="trendChart" style="font-size:13px;color:var(--ink3);text-align:center;padding:20px">Fill audit data for multiple days to see trends</div>
+  <div class="sec-hdr"><span class="sec-title">Breach History — Last 14 Days</span></div>
+  <div class="tcard" style="padding:20px 24px;margin-bottom:24px;">
+    <canvas id="breachBarCanvas" style="width:100%;max-height:260px;"></canvas>
+    <div id="breachBarEmpty" style="font-size:13px;color:var(--ink4);text-align:center;padding:20px;display:none">Fill audit data for multiple days to see breach history</div>
+  </div>
+
+  <div class="sec-hdr"><span class="sec-title">7-Day Summary</span></div>
+  <div class="tcard" style="padding:20px;margin-bottom:24px;">
+    <div id="trendChart"></div>
   </div>
 </div>
 </div>
@@ -834,39 +846,58 @@ function renderDWM(){
     if(!stList.length)return;
     const secDiv=document.createElement('div');
     secDiv.innerHTML='<div class="sec-hdr"><span class="sec-title">'+sec.label+'</span></div>';
+    // Section grid
+    const grid=document.createElement('div');
+    grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:8px;';
     stList.forEach((st,si)=>{
       activeCount++;
       const key=sec.key+'_'+si;
-      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const val=dwmData[key]?.['day']??'';
+      const total=val!==''?Number(val):0;
       const target=st.target||0;
-      const p=pct(total,target);
+      const p=target?Math.round(total/target*100):null;
+      const fillW=p!==null?Math.min(p,100):0;
+      const color=p===null?'var(--ink4)':p>=90?'var(--green)':p>=70?'var(--amber)':'var(--accent)';
+      const fillColor=p===null?'#CCC8C0':p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
+      const bgColor=p===null?'var(--surface2)':p>=90?'var(--green-bg)':p>=70?'var(--amber-bg)':'var(--accent-bg)';
+      const rating=p===null?'No target set':p>=90?'On Target':p>=70?'Near Target':'Below Target';
       if(p!==null&&p<100)belowCount++;
       totalOut+=total;if(target)totalTarget+=target;
-      const card=document.createElement('div');card.className='dwm-station';
-      let inputsHTML='';
-      for(let h=1;h<=12;h++){
-        const v=dwmData[key]?.[h]??'';
-        const hrTarget=target?Math.round(target/12):0;
-        const cls=v!==''?(Number(v)>=hrTarget?'d-ok':'d-low'):'';
-        inputsHTML+='<div class="dwm-hr"><div class="dwm-hr-lbl">HR'+h+'</div><input type="number" min="0" class="dwm-inp '+cls+'" value="'+(v??'')+'" placeholder="—" data-key="'+key+'" data-hr="'+h+'" onchange="onDWMInput(this)"/></div>';
-      }
-      const effPct=p!==null?p:null;
-      const fillW=effPct!==null?Math.min(effPct,100):0;
-      const fillCls=effClass(effPct);
-      card.innerHTML=`<div class="dwm-station-hdr">
-        <div class="dwm-station-name">${st.name}</div>
-        <div class="dwm-station-target">${target?'Target: '+target.toLocaleString()+'/shift':''}</div>
-      </div>
-      <div class="dwm-inputs">${inputsHTML}</div>
-      <div class="dwm-footer">
-        <div class="dwm-stat"><div class="dwm-stat-lbl">Total</div><div class="dwm-stat-val" id="dwm-total-${key}">${total.toLocaleString()}</div></div>
-        <div class="dwm-stat"><div class="dwm-stat-lbl">Avg/Hr</div><div class="dwm-stat-val" id="dwm-avg-${key}">${total?Math.round(total/12):0}</div></div>
-        <div class="dwm-stat"><div class="dwm-stat-lbl">Efficiency</div><div class="dwm-stat-val ${fillCls}" id="dwm-eff-${key}">${effPct!==null?effPct+'%':'—'}</div></div>
-        <div class="eff-bar"><div class="eff-fill ${fillCls}" id="dwm-bar-${key}" style="width:${fillW}%"></div></div>
-      </div>`;
-      secDiv.appendChild(card);
+      const card=document.createElement('div');
+      card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);';
+      card.innerHTML=`
+        <div style="height:3px;background:${fillColor};"></div>
+        <div style="padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink2);">${st.name}</div>
+              <div style="font-size:10px;color:var(--ink4);margin-top:2px;font-weight:500;letter-spacing:.04em;">${target?'TARGET: '+target.toLocaleString()+' / SHIFT':'NO TARGET SET'}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:${bgColor};flex-shrink:0;margin-left:8px;">
+              <span style="font-size:11px;font-weight:700;color:${fillColor};">${p!==null?p+'%':'—'}</span>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+              <div id="bar-${key}" style="height:100%;width:${fillW}%;background:${fillColor};border-radius:4px;transition:width .5s ease;"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:var(--surface2);border-radius:7px;padding:10px 12px;">
+              <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px;">Daily Output</div>
+              <input type="number" min="0" id="inp-${key}" value="${val}" placeholder="Enter output"
+                style="width:100%;border:none;background:transparent;font-family:var(--mono);font-size:18px;font-weight:700;color:${fillColor};outline:none;padding:0;-moz-appearance:textfield;"
+                data-key="${key}" oninput="onDWMInput(this)" onwheel="this.blur()"/>
+            </div>
+            <div style="background:var(--surface2);border-radius:7px;padding:10px 12px;">
+              <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px;">Status</div>
+              <div id="rating-${key}" style="font-size:13px;font-weight:600;color:${fillColor};margin-top:4px;">${rating}</div>
+            </div>
+          </div>
+        </div>`;
+      grid.appendChild(card);
     });
+    secDiv.appendChild(grid);
     cont.appendChild(secDiv);
   });
   // Summary stats
@@ -880,31 +911,34 @@ function renderDWM(){
 }
 
 function onDWMInput(inp){
-  const {key,hr}=inp.dataset;
+  const key=inp.dataset.key;
   if(!dwmData[key])dwmData[key]={};
-  dwmData[key][Number(hr)]=inp.value===''?'':Number(inp.value);
-  // recalc station footer
+  dwmData[key]['day']=inp.value===''?'':Number(inp.value);
   const secKey=key.split('_')[0];
   const si=Number(key.split('_')[1]);
   const st=(stations[secKey]||[])[si];
   if(!st)return;
-  const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-  const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+  const total=inp.value!==''?Number(inp.value):0;
   const target=st.target||0;
-  const p=pct(total,target);
-  const cls=effClass(p);
+  const p=target?Math.round(total/target*100):null;
   const fillW=p!==null?Math.min(p,100):0;
-  const tEl=document.getElementById('dwm-total-'+key);
-  const aEl=document.getElementById('dwm-avg-'+key);
-  const eEl=document.getElementById('dwm-eff-'+key);
-  const bEl=document.getElementById('dwm-bar-'+key);
-  if(tEl)tEl.textContent=total.toLocaleString();
-  if(aEl)aEl.textContent=total?Math.round(total/12):0;
-  if(eEl){eEl.textContent=p!==null?p+'%':'—';eEl.className='dwm-stat-val '+cls;}
-  if(bEl){bEl.style.width=fillW+'%';bEl.className='eff-fill '+cls;}
-  // update input color
-  const hrTarget=target?Math.round(target/12):0;
-  inp.className='dwm-inp '+(inp.value!==''?(Number(inp.value)>=hrTarget?'d-ok':'d-low'):'');
+  const fillColor=p===null?'#CCC8C0':p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
+  const bgColor=p===null?'var(--surface2)':p>=90?'var(--green-bg)':p>=70?'var(--amber-bg)':'var(--accent-bg)';
+  const rating=p===null?'No target set':p>=90?'On Target':p>=70?'Near Target':'Below Target';
+  // Update bar
+  const bar=document.getElementById('bar-'+key);
+  if(bar){bar.style.width=fillW+'%';bar.style.background=fillColor;}
+  // Update % pill
+  const card=inp.closest('[style*="border-radius:10px"]');
+  if(card){
+    const pill=card.querySelector('[style*="border-radius:20px"]');
+    if(pill){pill.querySelector('span').textContent=p!==null?p+'%':'—';pill.querySelector('span').style.color=fillColor;pill.style.background=bgColor;}
+    const ratingEl=document.getElementById('rating-'+key);
+    if(ratingEl){ratingEl.textContent=rating;ratingEl.style.color=fillColor;}
+    inp.style.color=fillColor;
+    const topBar=card.querySelector('[style*="height:3px"]');
+    if(topBar)topBar.style.background=fillColor;
+  }
   setSyncStatus('syncing','Unsaved');
   clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(window._firebaseReady)saveDWM();},3000);
   updateDWMSummary();
@@ -917,10 +951,10 @@ function updateDWMSummary(){
     stList.forEach((st,si)=>{
       activeCount++;
       const key=sec.key+'_'+si;
-      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const val=dwmData[key]?.['day']??'';
+      const total=val!==''?Number(val):0;
       const target=st.target||0;
-      const p=pct(total,target);
+      const p=target?Math.round(total/target*100):null;
       if(p!==null&&p<100)belowCount++;
       totalOut+=total;if(target)totalTarget+=target;
     });
@@ -930,81 +964,265 @@ function updateDWMSummary(){
   document.getElementById('dwmEff').textContent=overallEff!==null?overallEff+'%':'—';
   document.getElementById('dwmActive').textContent=activeCount;
   document.getElementById('dwmBelow').textContent=belowCount;
+  const effEl=document.getElementById('dwmEff');
+  if(overallEff!==null){effEl.className='sval '+(overallEff>=90?'green':overallEff>=70?'amber':'red');}
 }
+
+
 
 // ══════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
 function refreshDash(){
-  buildGauges();buildInspectorCards();buildTrend();
+  buildGauges();
+  buildInspectorLeaderboard();
+  buildInspectorCards();
+  buildBreachBarChart();
+  buildTrend();
 }
 
+// ── 1. Section Efficiency Cards ──────────────────────────
 function buildGauges(){
-  const cont=document.getElementById('dashGauges');cont.innerHTML='';
+  const cont = document.getElementById('dashGauges');
+  cont.innerHTML = '';
+  cont.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;';
+  let anyData = false;
   DWM_SECTIONS.forEach(sec=>{
-    const stList=(stations[sec.key]||[]).filter(s=>s.active&&s.target>0);
-    if(!stList.length)return;
-    let totalOut=0,totalTarget=0;
+    const stList = (stations[sec.key]||[]).filter(s=>s.active && s.target>0);
+    if(!stList.length) return;
+    let totalOut=0, totalTarget=0;
     stList.forEach((st,si)=>{
       const key=sec.key+'_'+si;
-      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-      totalOut+=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const dv=dwmData[key]?.['day']??'';
+      totalOut+=(dv!==''?Number(dv):0);
       totalTarget+=st.target;
     });
-    const p=pct(totalOut,totalTarget);
-    const cls=effClass(p);
-    const fillW=p!==null?Math.min(p,100):0;
-    const card=document.createElement('div');card.className='dash-card';
-    card.innerHTML=`<div class="dash-card-title">${sec.label} Section</div>
-    <div class="gauge-wrap">
-      <div class="gauge-val">${p!==null?p+'%':'—'}</div>
-      <div class="gauge-bar"><div class="gauge-fill ${cls}" style="width:${fillW}%"></div></div>
-      <div style="display:flex;justify-content:space-between;width:100%;margin-top:4px">
-        <span class="gauge-label">Output: ${totalOut.toLocaleString()}</span>
-        <span class="gauge-label">Target: ${totalTarget.toLocaleString()}</span>
+    const p = totalTarget ? Math.round(totalOut/totalTarget*100) : 0;
+    anyData = true;
+    const fillColor = p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
+    const fillW = Math.min(p,100);
+    const card = document.createElement('div');
+    card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 32px;box-shadow:var(--shadow);';
+    card.innerHTML=`
+      <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);margin-bottom:20px;">${sec.label} Section</div>
+      <div style="font-family:'Playfair Display',serif;font-size:64px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1;margin-bottom:24px;text-align:center;">${p}<span style="font-size:36px;">%</span></div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:16px;">
+        <div style="height:100%;width:${fillW}%;background:${fillColor};border-radius:3px;transition:width .6s ease;"></div>
       </div>
-    </div>`;
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:13px;color:var(--ink3);">Output: ${totalOut.toLocaleString()}</span>
+        <span style="font-size:13px;color:var(--ink3);">Target: ${totalTarget.toLocaleString()}</span>
+      </div>`;
     cont.appendChild(card);
   });
-  if(!cont.children.length){
-    cont.innerHTML='<div class="dash-card" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--ink4)">Enter DWM data to see efficiency gauges</div>';
+  if(!anyData){
+    cont.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink4);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">Set station targets and enter DWM data to see efficiency</div>';
   }
 }
 
+// ── 2. Inspector Leaderboard ──────────────────────────────
+function buildInspectorLeaderboard(){
+  const cont = document.getElementById('inspLeaderboard');
+  if(!cont) return;
+  const inspList = (stations.inspection||[]).filter(s=>s.active);
+  if(!inspList.length){
+    cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Configure inspection stations to see leaderboard</div>';
+    return;
+  }
+  const ranked = inspList.map((st,si)=>{
+    const key='inspection_'+si;
+    const dayVal=dwmData[key]?.['day']??'';
+    const total=dayVal!==''?Number(dayVal):0;
+    const p=st.target?Math.round(total/st.target*100):null;
+    return {name:st.name, type:st.type||'Inspector', total, target:st.target, p};
+  }).sort((a,b)=>(b.p||0)-(a.p||0));
+
+  let html='';
+  ranked.forEach((r,i)=>{
+    const barW = r.p!==null?Math.min(r.p,100):0;
+    const barColor = r.p===null?'#CCC8C0':r.p>=90?'#1A6B3C':r.p>=70?'#B85C00':'#C41E3A';
+    const medal = i===0?'#B8860B':i===1?'#9C9690':i===2?'#B85C00':'transparent';
+    const rankLabel = i<3?['1st','2nd','3rd'][i]:`${i+1}th`;
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="width:32px;height:32px;border-radius:50%;background:${medal};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${medal==='transparent'?'var(--ink4)':'#fff'};flex-shrink:0;border:1.5px solid ${medal==='transparent'?'var(--border)':medal}">${rankLabel}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${barColor};flex-shrink:0;margin-left:8px">${r.p!==null?r.p+'%':'—'}</span>
+        </div>
+        <div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${barColor};border-radius:4px;transition:width .6s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="font-size:10px;color:var(--ink4)">${r.type}</span>
+          <span style="font-size:10px;color:var(--ink4);font-family:var(--mono)">${r.total.toLocaleString()} / ${r.target.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  cont.innerHTML = html || '<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">No data yet</div>';
+}
+
+// ── 3. Inspector Detail Cards ─────────────────────────────
 function buildInspectorCards(){
   const cont=document.getElementById('inspectorCards');cont.innerHTML='';
   const inspList=(stations.inspection||[]).filter(s=>s.active);
-  if(!inspList.length){cont.innerHTML='<div style="color:var(--ink4);font-size:13px;grid-column:1/-1">Configure inspection stations to see performance cards</div>';return;}
+  if(!inspList.length){cont.innerHTML='<div style="color:var(--ink4);font-size:13px;grid-column:1/-1;text-align:center;padding:20px">Configure inspection stations to see performance cards</div>';return;}
   inspList.forEach((st,si)=>{
     const key='inspection_'+si;
-    const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-    const todayTotal=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+    const dayVal2=dwmData[key]?.['day']??'';
+    const todayTotal=dayVal2!==''?Number(dayVal2):0;
     const p=pct(todayTotal,st.target);
     const cls=effClass(p);
+    const rating=p===null?'—':p>=90?'Excellent':p>=75?'Good':p>=60?'Average':'Needs Attention';
+    const ratingColor=p===null?'var(--ink4)':p>=90?'var(--green)':p>=75?'var(--gold)':p>=60?'var(--amber)':'var(--accent)';
     const card=document.createElement('div');card.className='inspector-card';
     card.innerHTML=`<div class="insp-name">${st.name}</div>
-    <div class="insp-type">${st.type||'Inspector'} — Target: ${st.target}/shift</div>
+    <div class="insp-type">${st.type||'Inspector'} — Target: ${(st.target||0).toLocaleString()}/shift</div>
     <div class="insp-stat"><span class="insp-stat-lbl">Today Output</span><span class="insp-stat-val">${todayTotal.toLocaleString()}</span></div>
     <div class="insp-stat"><span class="insp-stat-lbl">Today Efficiency</span><span class="insp-stat-val ${cls}">${p!==null?p+'%':'—'}</span></div>
-    <div class="insp-stat"><span class="insp-stat-lbl">Avg/Hr</span><span class="insp-stat-val">${todayTotal?Math.round(todayTotal/12):0}</span></div>`;
+    <div class="insp-stat"><span class="insp-stat-lbl">Avg / Hr</span><span class="insp-stat-val">${todayTotal?Math.round(todayTotal/12):0}</span></div>
+    <div class="insp-stat"><span class="insp-stat-lbl">Rating</span><span class="insp-stat-val" style="color:${ratingColor}">${rating}</span></div>`;
     cont.appendChild(card);
   });
 }
 
-function buildTrend(){
-  const cont=document.getElementById('trendChart');
-  const dates=Object.keys(allAuditData).sort().slice(-7);
-  if(dates.length<2){cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Fill audit data for at least 2 days to see trends</div>';return;}
-  let html='<div style="overflow-x:auto"><table style="width:100%;min-width:400px;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border)">Date</th><th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">Breaches</th><th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:6px 10px;border-bottom:1px solid var(--border);text-align:center">Status</th></tr></thead><tbody>';
+// ── 4. Stacked Bar Chart — Breach History ─────────────────
+function buildBreachBarChart(){
+  const canvas = document.getElementById('breachBarCanvas');
+  const empty  = document.getElementById('breachBarEmpty');
+  if(!canvas) return;
+  const dates = Object.keys(allAuditData).sort().slice(-14);
+  if(dates.length < 2){
+    canvas.style.display='none';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  canvas.style.display='block';
+  if(empty) empty.style.display='none';
+
+  // Gather data per date per material
+  const epdmBreaches=[], silBreaches=[], labels=[];
   dates.forEach(d=>{
     const dd=allAuditData[d]||{};
-    let br=0;
-    MATS.forEach(m=>{AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
-      const v=dd[m]?.[s.key]?.[sl];const n=norms[s.key];
-      if(v!==''&&v!==undefined&&v!==null&&n!==''&&n!==null&&Number(v)>Number(n))br++;
-    });});});
-    const status=br===0?'<span style="color:var(--green);font-weight:600">Clean</span>':'<span style="color:var(--accent);font-weight:600">'+br+' breach'+(br>1?'es':'')+'</span>';
-    html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px 10px;font-size:12px;font-family:var(--mono)">'+fmtDate(d)+'</td><td style="text-align:center;padding:8px 10px;font-family:var(--mono);font-size:13px">'+br+'</td><td style="text-align:center;padding:8px 10px;font-size:12px">'+status+'</td></tr>';
+    let eb=0,sb=0;
+    AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+      const n=norms[s.key];
+      const ve=dd['EPDM']?.[s.key]?.[sl];
+      const vs=dd['Silicone']?.[s.key]?.[sl];
+      if(ve!==''&&ve!==undefined&&ve!==null&&n!==''&&n!==null&&Number(ve)>Number(n))eb++;
+      if(vs!==''&&vs!==undefined&&vs!==null&&n!==''&&n!==null&&Number(vs)>Number(n))sb++;
+    });});
+    epdmBreaches.push(eb);
+    silBreaches.push(sb);
+    labels.push(fmtDate(d).slice(0,6)); // "24 Apr"
+  });
+
+  const dpr = window.devicePixelRatio||1;
+  const W = canvas.parentElement.clientWidth - 48;
+  const H = 240;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W+'px';
+  canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const padL=40, padR=16, padT=20, padB=50;
+  const chartW=W-padL-padR, chartH=H-padT-padB;
+  const maxVal=Math.max(1,...epdmBreaches.map((e,i)=>e+silBreaches[i]));
+  const barW=Math.max(8, chartW/dates.length*0.55);
+  const gap  =chartW/dates.length;
+
+  // Y grid lines
+  ctx.strokeStyle='#E2DDD6';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=padT+chartH-(i/4)*chartH;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+chartW,y);ctx.stroke();
+    ctx.fillStyle='#9C9690';ctx.font='10px "IBM Plex Mono",monospace';ctx.textAlign='right';
+    ctx.fillText(Math.round(i/4*maxVal), padL-6, y+3);
+  }
+
+  // Bars
+  dates.forEach((d,i)=>{
+    const x = padL + i*gap + gap/2 - barW/2;
+    const eH = (epdmBreaches[i]/maxVal)*chartH;
+    const sH = (silBreaches[i]/maxVal)*chartH;
+    const total=epdmBreaches[i]+silBreaches[i];
+    const tH = (total/maxVal)*chartH;
+
+    // Silicone (bottom)
+    if(sH>0){
+      ctx.fillStyle='#1A6B3C';
+      ctx.beginPath();
+      ctx.roundRect(x, padT+chartH-sH, barW, sH, [3,3,0,0]);
+      ctx.fill();
+    }
+    // EPDM (top)
+    if(eH>0){
+      ctx.fillStyle='#1A3D6B';
+      ctx.beginPath();
+      ctx.roundRect(x, padT+chartH-sH-eH, barW, eH, [3,3,0,0]);
+      ctx.fill();
+    }
+    // Value label on top
+    if(total>0){
+      ctx.fillStyle='#3D3A36';ctx.font='bold 10px "IBM Plex Mono",monospace';ctx.textAlign='center';
+      ctx.fillText(total, x+barW/2, padT+chartH-tH-5);
+    }
+    // X label
+    ctx.fillStyle='#6B6660';ctx.font='9px "IBM Plex Sans",sans-serif';ctx.textAlign='center';
+    ctx.fillText(labels[i], x+barW/2, H-padB+16);
+  });
+
+  // Legend
+  const legendY = H-10;
+  ctx.fillStyle='#1A3D6B';ctx.fillRect(padL, legendY-8, 12, 8);
+  ctx.fillStyle='#6B6660';ctx.font='10px "IBM Plex Sans",sans-serif';ctx.textAlign='left';
+  ctx.fillText('EPDM', padL+16, legendY);
+  ctx.fillStyle='#1A6B3C';ctx.fillRect(padL+65, legendY-8, 12, 8);
+  ctx.fillText('Silicone', padL+81, legendY);
+
+  // Y axis line
+  ctx.strokeStyle='#CCC8C0';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(padL,padT);ctx.lineTo(padL,padT+chartH);ctx.stroke();
+}
+
+// ── 5. 7-Day trend table ──────────────────────────────────
+function buildTrend(){
+  const cont=document.getElementById('trendChart');
+  if(!cont) return;
+  const dates=Object.keys(allAuditData).sort().slice(-7);
+  if(dates.length<1){cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Fill audit data for at least 1 day to see the trend</div>';return;}
+  let html='<div style="overflow-x:auto"><table style="width:100%;min-width:400px;border-collapse:collapse">'
+    +'<thead><tr>'
+    +'<th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border)">Date</th>'
+    +'<th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border);text-align:center">EPDM Breaches</th>'
+    +'<th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border);text-align:center">Silicone Breaches</th>'
+    +'<th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border);text-align:center">Total</th>'
+    +'<th style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border);text-align:center">Status</th>'
+    +'</tr></thead><tbody>';
+  dates.forEach((d,idx)=>{
+    const dd=allAuditData[d]||{};
+    let eb=0,sb=0;
+    AUDIT_STAGES.forEach(s=>{SLOTS.forEach(sl=>{
+      const n=norms[s.key];
+      const ve=dd['EPDM']?.[s.key]?.[sl];const vs=dd['Silicone']?.[s.key]?.[sl];
+      if(ve!==''&&ve!==undefined&&ve!==null&&n!==''&&n!==null&&Number(ve)>Number(n))eb++;
+      if(vs!==''&&vs!==undefined&&vs!==null&&n!==''&&n!==null&&Number(vs)>Number(n))sb++;
+    });});
+    const total=eb+sb;
+    const bg=idx%2===0?'#FFFFFF':'#F7F6F3';
+    const statusColor=total===0?'#1A6B3C':'#C41E3A';
+    const statusText=total===0?'Clean':total+' Breach'+(total>1?'es':'');
+    html+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
+      <td style="padding:9px 12px;font-size:12px;font-family:var(--mono);color:var(--ink2)">${fmtDate(d)}</td>
+      <td style="text-align:center;padding:9px 12px;font-family:var(--mono);font-size:13px;color:${eb>0?'#1A3D6B':'var(--ink4)'};font-weight:${eb>0?700:400}">${eb||'—'}</td>
+      <td style="text-align:center;padding:9px 12px;font-family:var(--mono);font-size:13px;color:${sb>0?'#1A6B3C':'var(--ink4)'};font-weight:${sb>0?700:400}">${sb||'—'}</td>
+      <td style="text-align:center;padding:9px 12px;font-family:var(--mono);font-size:14px;font-weight:700;color:${total>0?'#C41E3A':'var(--ink4)'}">${total||'—'}</td>
+      <td style="text-align:center;padding:9px 12px"><span style="display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:${total===0?'#EDF7F2':'#FDF0F2'};color:${statusColor};border:1px solid ${total===0?'#A8D5BC':'#F5C0C8'}">${statusText}</span></td>
+    </tr>`;
   });
   html+='</tbody></table></div>';
   cont.innerHTML=html;
@@ -1026,8 +1244,8 @@ function genWA(){
   DWM_SECTIONS.forEach(sec=>{
     (stations[sec.key]||[]).filter(s=>s.active).forEach((st,si)=>{
       const key=sec.key+'_'+si;
-      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-      totalOut+=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const dayVal=dwmData[key]?.['day']??'';
+      totalOut+=(dayVal!==''?Number(dayVal):0);
     });
   });
   const msg=`*MRP AutoRub – Daily Production Summary*
@@ -1250,45 +1468,38 @@ async function exportExcel(){
   const dws={};
   for(let c=1;c<=8;c++) dws[colLetter(c)+'1']=xCell(c===1?'MRP AUTORUB — DWM PRODUCTION REPORT':'',{bold:true,sz:12,fc:'FFFFFF',bg:'1A1714'});
   for(let c=1;c<=8;c++) dws[colLetter(c)+'2']=xCell(c===1?'Date: '+fmtDate(today)+'   |   Generated: '+genTime:'',{sz:9,fc:'9C9690',bg:'2A2724'});
-  const dHdrs=['Section','Station','Target/Shift','Hr 1','Hr 2','Hr 3','Hr 4','Hr 5','Hr 6','Hr 7','Hr 8','Hr 9','Hr 10','Hr 11','Hr 12','Total','Avg/Hr','Efficiency'];
+  const dHdrs=['Section','Station','Target / Shift','Daily Output','Efficiency %','Status'];
   dHdrs.forEach((h,i)=>dws[colLetter(i+1)+'4']=xCell(h,{bold:true,sz:9,fc:'FFFFFF',bg:'3D3A36',al:'center',border:true}));
   let dr=5;
   DWM_SECTIONS.forEach(sec=>{
     const stList=(stations[sec.key]||[]).filter(s=>s.active);
     if(!stList.length)return;
-    // Section header
-    for(let c=1;c<=18;c++) dws[colLetter(c)+dr]=xCell(c===1?sec.label.toUpperCase():'',{bold:true,sz:10,fc:'FFFFFF',bg:'3D3A36'});
+    for(let c=1;c<=6;c++) dws[colLetter(c)+dr]=xCell(c===1?sec.label.toUpperCase():'',{bold:true,sz:10,fc:'FFFFFF',bg:'3D3A36'});
     dr++;
     stList.forEach((st,si)=>{
       const key=sec.key+'_'+si;
-      const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-      const total=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+      const dv=dwmData[key]?.['day']??'';
+      const total=dv!==''?Number(dv):0;
       const target=st.target||0;
       const p=target?Math.round(total/target*100):null;
       const bg=dr%2===0?'FFFFFF':'F7F6F3';
       const effBg=p===null?bg:p>=90?'EDF7F2':p>=70?'FEF3E8':'FDF0F2';
       const effFc=p===null?'000000':p>=90?'1A6B3C':p>=70?'B85C00':'C41E3A';
+      const status=p===null?'—':p>=90?'On Target':p>=70?'Near Target':'Below Target';
       dws['A'+dr]=xCell(sec.label,{sz:9,bg,border:true});
       dws['B'+dr]=xCell(st.name,{sz:9,bold:true,bg,border:true});
       dws['C'+dr]=xCell(target||'—',{sz:9,t:target?'n':'s',al:'center',bg,border:true});
-      hrs.forEach((v,hi)=>{
-        const hrTarget=target?Math.round(target/12):0;
-        const isBad=v!==''&&hrTarget&&Number(v)<hrTarget*0.8;
-        dws[colLetter(4+hi)+dr]=xCell(v===''?'—':Number(v),{sz:9,t:v===''?'s':'n',al:'center',
-          bg:isBad?'FDF0F2':v!==''?bg:bg,fc:isBad?'C41E3A':'000000',border:true});
-      });
-      dws['P'+dr]=xCell(total,{sz:10,t:'n',bold:true,al:'center',bg:effBg,fc:effFc,border:true});
-      dws['Q'+dr]=xCell(total?Math.round(total/12):0,{sz:9,t:'n',al:'center',bg,border:true});
-      dws['R'+dr]=xCell(p!==null?p+'%':'—',{sz:10,bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+      dws['D'+dr]=xCell(total||'—',{sz:10,t:total?'n':'s',bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+      dws['E'+dr]=xCell(p!==null?p+'%':'—',{sz:10,bold:true,al:'center',bg:effBg,fc:effFc,border:true});
+      dws['F'+dr]=xCell(status,{sz:9,bold:true,al:'center',bg:p===null?bg:p>=90?'1A6B3C':p>=70?'B85C00':'C41E3A',fc:'FFFFFF',border:true});
       dr++;
     });
-    // Section subtotal
-    for(let c=1;c<=18;c++) dws[colLetter(c)+dr]=xCell(c===1?sec.label+' Sub-Total':'',{bold:true,sz:9,bg:'F0EEE9',border:true});
+    for(let c=1;c<=6;c++) dws[colLetter(c)+dr]=xCell('',{bg:'F0EEE9'});
     dr++;
   });
-  dws['!merges']=[{s:{r:0,c:0},e:{r:0,c:17}},{s:{r:1,c:0},e:{r:1,c:17}}];
-  dws['!cols']=[{wch:12},{wch:22},{wch:12},...Array(12).fill({wch:7}),{wch:9},{wch:8},{wch:11}];
-  setRange(dws,dr,18);
+  dws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  dws['!cols']=[{wch:14},{wch:24},{wch:14},{wch:14},{wch:14},{wch:16}];
+  setRange(dws,dr,6);
   XLSX.utils.book_append_sheet(wb,dws,'DWM Production');
 
   // ════════════════════════════════════════
@@ -1303,8 +1514,8 @@ async function exportExcel(){
   const inspList=(stations.inspection||[]).filter(s=>s.active);
   inspList.forEach((st,si)=>{
     const key='inspection_'+si;
-    const hrs=Array.from({length:12},(_,h)=>dwmData[key]?.[h+1]??'');
-    const todayTotal=hrs.reduce((a,v)=>a+(v!==''?Number(v):0),0);
+    const dayVal2=dwmData[key]?.['day']??'';
+    const todayTotal=dayVal2!==''?Number(dayVal2):0;
     const p=pct(todayTotal,st.target);
     const bg=ir%2===0?'FFFFFF':'F7F6F3';
     const effBg=p===null?bg:p>=90?'EDF7F2':p>=70?'FEF3E8':'FDF0F2';
@@ -1464,6 +1675,21 @@ function toast(msg,type='success'){
 // ══════════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════════
+
+// roundRect polyfill for older browsers
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    if(typeof r==='number')r=[r,r,r,r];
+    this.beginPath();
+    this.moveTo(x+r[0],y);
+    this.lineTo(x+w-r[1],y);this.quadraticCurveTo(x+w,y,x+w,y+r[1]);
+    this.lineTo(x+w,y+h-r[2]);this.quadraticCurveTo(x+w,y+h,x+w-r[2],y+h);
+    this.lineTo(x+r[3],y+h);this.quadraticCurveTo(x,y+h,x,y+h-r[3]);
+    this.lineTo(x,y+r[0]);this.quadraticCurveTo(x,y,x+r[0],y);
+    this.closePath();return this;
+  };
+}
+
 function boot(){
   norms=lsGet(NK)||{...DN};
   stations=lsGet(SK)||JSON.parse(JSON.stringify(DEFAULT_STATIONS));
