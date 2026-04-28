@@ -741,6 +741,8 @@ async function loadConfig(){
     if(snap.exists()){ dwmData=snap.data(); allDwmData[dwmDate]=dwmData; }
   }catch{}
   renderAudit();renderDWM();
+  // Re-render DWM after short delay to ensure DOM is ready
+  setTimeout(()=>renderDWM(), 300);
 }
 
 async function loadAllDWMHistory(){
@@ -924,21 +926,22 @@ function renderDWM(){
       const color=p===null?'var(--ink4)':p>=90?'var(--green)':p>=70?'var(--amber)':'var(--accent)';
       const fillColor=p===null?'#CCC8C0':p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
       const bgColor=p===null?'var(--surface2)':p>=90?'var(--green-bg)':p>=70?'var(--amber-bg)':'var(--accent-bg)';
-      const rating=p===null?'No target set':p>=90?'On Target':p>=70?'Near Target':'Below Target';
-      if(p!==null&&p<100)belowCount++;
+      const rating=p===null?'No target set':p>=100?'Target Achieved':p>=90?'On Target':p>=70?'Near Target':'Below Target';
+      if(p!==null&&p<70)belowCount++;
       totalOut+=total;if(target)totalTarget+=target;
       const card=document.createElement('div');
       card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);';
+      card.setAttribute('data-card-key', key);
       card.innerHTML=`
-        <div style="height:3px;background:${fillColor};"></div>
+        <div id="topbar-${key}" style="height:3px;background:${fillColor};"></div>
         <div style="padding:16px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
             <div>
               <div style="font-size:13px;font-weight:600;color:var(--ink2);">${st.name}</div>
               <div style="font-size:10px;color:var(--ink4);margin-top:2px;font-weight:500;letter-spacing:.04em;">${target?'TARGET: '+target.toLocaleString()+' / SHIFT':'NO TARGET SET'}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:${bgColor};flex-shrink:0;margin-left:8px;">
-              <span style="font-size:11px;font-weight:700;color:${fillColor};">${p!==null?p+'%':'—'}</span>
+            <div id="pill-${key}" style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:${bgColor};flex-shrink:0;margin-left:8px;">
+              <span id="pill-txt-${key}" style="font-size:11px;font-weight:700;color:${fillColor};">${p!==null?p+'%':'—'}</span>
             </div>
           </div>
           <div style="margin-bottom:12px;">
@@ -951,7 +954,7 @@ function renderDWM(){
               <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px;">Daily Output</div>
               <input type="number" min="0" id="inp-${key}" value="${val}" placeholder="Enter output"
                 style="width:100%;border:none;background:transparent;font-family:var(--mono);font-size:18px;font-weight:700;color:${fillColor};outline:none;padding:0;-moz-appearance:textfield;"
-                data-key="${key}" oninput="onDWMInput(this)" onwheel="this.blur()"/>
+                data-key="${key}" data-target="${target}" oninput="onDWMInput(this)" onwheel="this.blur()"/>
             </div>
             <div style="background:var(--surface2);border-radius:7px;padding:10px 12px;">
               <div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px;">Status</div>
@@ -964,6 +967,7 @@ function renderDWM(){
     secDiv.appendChild(grid);
     cont.appendChild(secDiv);
   });
+
   // Summary stats
   const overallEff=totalTarget?Math.round(totalOut/totalTarget*100):null;
   document.getElementById('dwmTotal').textContent=totalOut.toLocaleString();
@@ -990,21 +994,19 @@ function onDWMInput(inp){
   const fillW=p!==null?Math.min(p,100):0;
   const fillColor=p===null?'#CCC8C0':p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
   const bgColor=p===null?'var(--surface2)':p>=90?'var(--green-bg)':p>=70?'var(--amber-bg)':'var(--accent-bg)';
-  const rating=p===null?'No target set':p>=90?'On Target':p>=70?'Near Target':'Below Target';
-  // Update bar
+  const rating=p===null?'No target set':p>=100?'Target Achieved':p>=90?'On Target':p>=70?'Near Target':'Below Target';
+  // Update all elements directly by ID
   const bar=document.getElementById('bar-'+key);
   if(bar){bar.style.width=fillW+'%';bar.style.background=fillColor;}
-  // Update % pill
-  const card=inp.closest('[style*="border-radius:10px"]');
-  if(card){
-    const pill=card.querySelector('[style*="border-radius:20px"]');
-    if(pill){pill.querySelector('span').textContent=p!==null?p+'%':'—';pill.querySelector('span').style.color=fillColor;pill.style.background=bgColor;}
-    const ratingEl=document.getElementById('rating-'+key);
-    if(ratingEl){ratingEl.textContent=rating;ratingEl.style.color=fillColor;}
-    inp.style.color=fillColor;
-    const topBar=card.querySelector('[style*="height:3px"]');
-    if(topBar)topBar.style.background=fillColor;
-  }
+  const pillEl=document.getElementById('pill-'+key);
+  if(pillEl){pillEl.style.background=bgColor;}
+  const pillTxt=document.getElementById('pill-txt-'+key);
+  if(pillTxt){pillTxt.textContent=p!==null?p+'%':'—';pillTxt.style.color=fillColor;}
+  const ratingEl=document.getElementById('rating-'+key);
+  if(ratingEl){ratingEl.textContent=rating;ratingEl.style.color=fillColor;}
+  const topBar=document.getElementById('topbar-'+key);
+  if(topBar){topBar.style.background=fillColor;}
+  inp.style.color=fillColor;
   setSyncStatus('syncing','Unsaved');
   clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(window._firebaseReady)saveDWM();},3000);
   if(key.startsWith('inspection_')) checkInspectionMismatch();
@@ -1082,7 +1084,7 @@ function updateDWMSummary(){
         :stList.reduce((a,st,si)=>{const v=dwmData['inspection_'+si]?.['day']??'';return a+(v!==''?Number(v):0);},0);
       const inspTarget=stList.reduce((a,st)=>a+(st.target||0),0);
       const p=inspTarget?Math.round(inspOut/inspTarget*100):null;
-      if(p!==null&&p<100)belowCount++;
+      if(p!==null&&p<70)belowCount++;
       totalOut+=inspOut; if(inspTarget)totalTarget+=inspTarget;
       activeCount+=stList.length;
       return;
@@ -1094,7 +1096,7 @@ function updateDWMSummary(){
       const total=val!==''?Number(val):0;
       const target=st.target||0;
       const p=target?Math.round(total/target*100):null;
-      if(p!==null&&p<100)belowCount++;
+      if(p!==null&&p<70)belowCount++;
       totalOut+=total;if(target)totalTarget+=target;
     });
   });
@@ -1705,7 +1707,7 @@ async function exportExcel(){
       const bg=dr%2===0?'FFFFFF':'F7F6F3';
       const effBg=p===null?bg:p>=90?'EDF7F2':p>=70?'FEF3E8':'FDF0F2';
       const effFc=p===null?'000000':p>=90?'1A6B3C':p>=70?'B85C00':'C41E3A';
-      const status=p===null?'—':p>=90?'On Target':p>=70?'Near Target':'Below Target';
+      const status=p===null?'—':p>=100?'Target Achieved':p>=90?'On Target':p>=70?'Near Target':'Below Target';
       dws['A'+dr]=xCell(sec.label,{sz:9,bg,border:true});
       dws['B'+dr]=xCell(st.name,{sz:9,bold:true,bg,border:true});
       dws['C'+dr]=xCell(target||'—',{sz:9,t:target?'n':'s',al:'center',bg,border:true});
