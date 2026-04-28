@@ -487,11 +487,19 @@ td.acol{background:rgba(26,61,107,.03);}
         <div class="page-title">Line Efficiency Overview</div>
         <div class="page-sub">Live production performance across all sections</div>
       </div>
-      <button class="btn btn-outline" onclick="refreshDash()">Refresh</button>
+      <button class="btn btn-outline" onclick="loadAllHistory().then(()=>refreshDash())">Refresh</button>
+    </div>
+    <!-- View mode selector -->
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">
+      <button id="dashModeToday" class="btn btn-primary" onclick="setDashMode('today')" style="font-size:12px;padding:8px 16px;">Today</button>
+      <button id="dashModeDate" class="btn btn-ghost" onclick="setDashMode('date')" style="font-size:12px;padding:8px 16px;">Specific Date</button>
+      <button id="dashModeOverall" class="btn btn-ghost" onclick="setDashMode('overall')" style="font-size:12px;padding:8px 16px;">Overall (All Dates)</button>
+      <input type="date" id="dashDatePicker" style="display:none;padding:8px 12px;border-radius:7px;border:1.5px solid var(--border2);background:var(--bg);font-family:var(--font);font-size:13px;color:var(--ink);outline:none;" onchange="refreshDash()"/>
+      <span id="dashModeLabel" style="font-size:12px;color:var(--ink4);margin-left:4px;font-style:italic;"></span>
     </div>
   </div>
 
-  <div class="sec-hdr"><span class="sec-title">Section Efficiency — Live Gauges</span></div>
+  <div class="sec-hdr"><span class="sec-title" id="dashGaugeTitle">Section Efficiency — Today</span></div>
   <div id="dashGauges" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;"></div>
 
   <div class="sec-hdr"><span class="sec-title">Inspector Leaderboard</span></div>
@@ -658,6 +666,7 @@ const DEFAULT_STATIONS={
 // ══════════════════════════════════════════════════════════
 let allAuditData={}, allDwmData={}, dwmData={}, norms={...DN}, stations=JSON.parse(JSON.stringify(DEFAULT_STATIONS));
 let today=todayKey(), dwmDate=todayKey(), curSlot=slotIdx(), saveTimer=null, unsubAudit=null;
+let dashMode='today'; // 'today' | 'date' | 'overall'
 
 // ══════════════════════════════════════════════════════════
 // HELPERS
@@ -680,9 +689,9 @@ function switchPage(id){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   document.getElementById('nav-'+id).classList.add('active');
-  if(id==='dash') refreshDash();
+  if(id==='dash') loadAllHistory().then(()=>loadAllDWMHistory()).then(()=>refreshDash());
   if(id==='dwm') initDWMDatePicker();
-  if(id==='reports'){genWA();buildHeatmap();}
+  if(id==='reports') loadAllHistory().then(()=>{genWA();buildBreachBarChart();buildTrend();buildHeatmap();});
 }
 
 // ══════════════════════════════════════════════════════════
@@ -734,11 +743,19 @@ async function loadConfig(){
   renderAudit();renderDWM();
 }
 
+async function loadAllDWMHistory(){
+  try{
+    const snap=await window._getDocs(window._collection(window._db,'dwm'));
+    snap.forEach(d=>{ allDwmData[d.id]=d.data(); });
+  }catch(e){console.warn('loadAllDWMHistory failed',e);}
+}
+
 async function loadAllHistory(){
   try{
     const snap=await window._getDocs(window._collection(window._db,'audits'));
-    snap.forEach(d=>{allAuditData[d.id]=d.data();});
-  }catch(e){console.warn(e);}
+    snap.forEach(d=>{ allAuditData[d.id]=d.data(); });
+    updateStatDays();
+  }catch(e){console.warn('loadAllHistory failed',e);}
 }
 
 async function saveToCloud(){
@@ -1097,6 +1114,59 @@ function updateDWMSummary(){
 // ══════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════
+function setDashMode(mode){
+  dashMode = mode;
+  ['today','date','overall'].forEach(m=>{
+    const btn=document.getElementById('dashMode'+m.charAt(0).toUpperCase()+m.slice(1));
+    if(btn) btn.className = m===mode?'btn btn-primary':'btn btn-ghost';
+  });
+  const picker = document.getElementById('dashDatePicker');
+  const label  = document.getElementById('dashModeLabel');
+  const title  = document.getElementById('dashGaugeTitle');
+  if(mode==='date'){
+    picker.style.display='block';
+    if(!picker.value) picker.value = todayKey();
+    picker.max = todayKey();
+    label.textContent='';
+    title.textContent='Section Efficiency — '+fmtDate(picker.value);
+  } else {
+    picker.style.display='none';
+    if(mode==='today'){
+      label.textContent='Showing today\'s data';
+      title.textContent='Section Efficiency — Today ('+fmtDate(todayKey())+')';
+    } else {
+      label.textContent='Cumulative: Total output ÷ Total target × 100 across all dates';
+      title.textContent='Section Efficiency — Overall Average (All Dates)';
+    }
+  }
+  refreshDash();
+}
+
+function getDWMDataForMode(){
+  // Returns dwmData-like object for the selected mode
+  if(dashMode==='today') return allDwmData[todayKey()]||dwmData||{};
+  if(dashMode==='date'){
+    const picker=document.getElementById('dashDatePicker');
+    const d=picker?picker.value:todayKey();
+    return allDwmData[d]||{};
+  }
+  // Overall: aggregate across all dates
+  const agg={};
+  Object.values(allDwmData).forEach(dayData=>{
+    if(!dayData) return;
+    Object.keys(dayData).forEach(k=>{
+      const v=dayData[k];
+      if(k==='insp_overall_silicone'||k==='insp_overall_epdm'){
+        agg[k]=(Number(agg[k]||0))+(v!==''?Number(v):0);
+      } else if(typeof v==='object'&&v!==null&&v['day']!==undefined){
+        if(!agg[k]) agg[k]={};
+        agg[k]['day']=(Number(agg[k]['day']||0))+(v['day']!==''?Number(v['day']):0);
+      }
+    });
+  });
+  return agg;
+}
+
 function refreshDash(){
   buildGauges();
   buildInspectorLeaderboard();
@@ -1110,32 +1180,36 @@ function buildGauges(){
   const cont = document.getElementById('dashGauges');
   cont.innerHTML = '';
   cont.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;';
+  const modeData = getDWMDataForMode();
   let anyData = false;
+
   DWM_SECTIONS.forEach(sec=>{
     const stList = (stations[sec.key]||[]).filter(s=>s.active && s.target>0);
     if(!stList.length) return;
     let totalOut=0, totalTarget=0;
 
     if(sec.key==='inspection'){
-      // Use overall totals if available, else fall back to inspector-wise sum
-      const silOverall = dwmData['insp_overall_silicone']??'';
-      const epdmOverall = dwmData['insp_overall_epdm']??'';
-      const hasOverall = silOverall!==''||epdmOverall!=='';
+      const silOverall = modeData['insp_overall_silicone']??'';
+      const epdmOverall = modeData['insp_overall_epdm']??'';
+      const hasOverall = (silOverall!==''&&silOverall!==0)||(epdmOverall!==''&&epdmOverall!==0);
       if(hasOverall){
         totalOut = (silOverall!==''?Number(silOverall):0) + (epdmOverall!==''?Number(epdmOverall):0);
       } else {
         stList.forEach((st,si)=>{
-          const dv=dwmData['inspection_'+si]?.['day']??'';
+          const dv=modeData['inspection_'+si]?.['day']??'';
           totalOut+=(dv!==''?Number(dv):0);
         });
       }
-      stList.forEach(st=>{ totalTarget+=st.target; });
+      // For overall mode, multiply target by number of days recorded
+      const numDays = dashMode==='overall' ? Math.max(Object.keys(allDwmData).length,1) : 1;
+      stList.forEach(st=>{ totalTarget+=st.target*numDays; });
     } else {
+      const numDays = dashMode==='overall' ? Math.max(Object.keys(allDwmData).length,1) : 1;
       stList.forEach((st,si)=>{
         const key=sec.key+'_'+si;
-        const dv=dwmData[key]?.['day']??'';
+        const dv=modeData[key]?.['day']??'';
         totalOut+=(dv!==''?Number(dv):0);
-        totalTarget+=st.target;
+        totalTarget+=st.target*numDays;
       });
     }
 
@@ -1143,17 +1217,18 @@ function buildGauges(){
     anyData = true;
     const fillColor = p>=90?'#1A6B3C':p>=70?'#B85C00':'#C41E3A';
     const fillW = Math.min(p,100);
+    const modeLabel = dashMode==='overall'?'Cumulative Output':dashMode==='date'?'Output':'Today Output';
     const card = document.createElement('div');
     card.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px 32px;box-shadow:var(--shadow);';
     card.innerHTML=`
       <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink4);margin-bottom:20px;">${sec.label} Section</div>
-      <div style="font-family:'Playfair Display',serif;font-size:64px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1;margin-bottom:24px;text-align:center;">${p}<span style="font-size:36px;">%</span></div>
+      <div style="font-family:'Playfair Display',serif;font-size:64px;font-weight:700;color:${fillColor};letter-spacing:-.02em;line-height:1;margin-bottom:24px;text-align:center;">${p}<span style="font-size:36px;">%</span></div>
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:16px;">
         <div style="height:100%;width:${fillW}%;background:${fillColor};border-radius:3px;transition:width .6s ease;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="font-size:13px;color:var(--ink3);">Output: ${totalOut.toLocaleString()}</span>
-        <span style="font-size:13px;color:var(--ink3);">Target: ${totalTarget.toLocaleString()}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--ink3);">${modeLabel}: <strong style="color:var(--ink);font-family:var(--mono)">${totalOut.toLocaleString()}</strong></span>
+        <span style="font-size:12px;color:var(--ink3);">Target: <strong style="color:var(--ink4);font-family:var(--mono)">${totalTarget.toLocaleString()}</strong></span>
       </div>`;
     cont.appendChild(card);
   });
@@ -1235,10 +1310,13 @@ function buildBreachBarChart(){
   const empty  = document.getElementById('breachBarEmpty');
   if(!canvas) return;
   const dates = Object.keys(allAuditData).sort().slice(-14);
-  if(dates.length < 2){
+  if(dates.length < 1){
     canvas.style.display='none';
     if(empty) empty.style.display='block';
     return;
+  }
+  if(dates.length < 2){
+    // Show single day as a single bar still
   }
   canvas.style.display='block';
   if(empty) empty.style.display='none';
@@ -1336,7 +1414,7 @@ function buildTrend(){
   const cont=document.getElementById('trendChart');
   if(!cont) return;
   const dates=Object.keys(allAuditData).sort().slice(-7);
-  if(dates.length<1){cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">Fill audit data for at least 1 day to see the trend</div>';return;}
+  if(!dates.length){cont.innerHTML='<div style="font-size:13px;color:var(--ink4);text-align:center;padding:20px">No audit data found. Fill the audit tab and sync.</div>';return;}
   let html='<div style="overflow-x:auto"><table style="width:100%;min-width:400px;border-collapse:collapse">'
     +'<thead><tr>'
     +'<th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);padding:8px 12px;border-bottom:1.5px solid var(--border)">Date</th>'
